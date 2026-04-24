@@ -70,7 +70,7 @@ export default function Landing() {
       </div>
 
       {/* HERO */}
-      <section ref={heroRef} className="relative min-h-screen pt-24 md:pt-28 pb-20">
+      <section ref={heroRef} className="relative min-h-screen pt-4 md:pt-6 pb-20">
         {/* Logo watermark — parallax */}
         <motion.div
           style={{ y: watermarkY, scale: watermarkScale }}
@@ -94,7 +94,7 @@ export default function Landing() {
           {Array.from({ length: 10 }).map((_, i) => <span key={i} />)}
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-5 md:px-10 h-full flex flex-col justify-end pt-[22vh] md:pt-[28vh]">
+        <div className="relative z-10 max-w-7xl mx-auto px-5 md:px-10 h-full flex flex-col justify-end pt-[12vh] md:pt-[16vh]">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
