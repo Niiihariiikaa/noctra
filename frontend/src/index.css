@@ -1,0 +1,232 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,0..100;1,9..144,300..900,0..100&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&family=Rozha+One&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --cream: #efe8d8;
+    --cream-2: #e8e0cd;
+    --ink: #0a0a0a;
+    --red: #e63946;
+    --red-2: #c1121f;
+    --blue: #1d4ed8;
+    --yellow: #f4c542;
+    --muted: #7a7466;
+}
+
+html, body, #root {
+    background-color: var(--cream);
+    color: var(--ink);
+}
+
+body {
+    margin: 0;
+    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--cream);
+    color: var(--ink);
+    font-feature-settings: "ss01" on, "ss02" on;
+}
+
+code, .mono { font-family: 'Space Mono', monospace; }
+
+.display {
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 100;
+    letter-spacing: -0.04em;
+    line-height: 0.88;
+    font-weight: 900;
+}
+
+/* Noctra wordmark — stretched, curvy, flared */
+.noctra-mark {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "wght" 900;
+    font-style: italic;
+    letter-spacing: -0.03em;
+    transform: scaleY(1.35);
+    transform-origin: center;
+    display: inline-block;
+    line-height: 1;
+}
+
+.noctra-mark-tight {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "wght" 900;
+    font-style: italic;
+    letter-spacing: -0.04em;
+    display: inline-block;
+    line-height: 1;
+}
+
+@layer base {
+    :root {
+        /* Noctra light theme */
+        --background: 42 30% 89%;
+        --foreground: 0 0% 4%;
+        --card: 42 20% 95%;
+        --card-foreground: 0 0% 4%;
+        --popover: 42 20% 95%;
+        --popover-foreground: 0 0% 4%;
+        --primary: 355 78% 56%;
+        --primary-foreground: 42 30% 89%;
+        --secondary: 42 20% 85%;
+        --secondary-foreground: 0 0% 4%;
+        --muted: 42 15% 80%;
+        --muted-foreground: 35 10% 40%;
+        --accent: 355 78% 56%;
+        --accent-foreground: 42 30% 89%;
+        --destructive: 0 72% 40%;
+        --destructive-foreground: 42 30% 89%;
+        --border: 0 0% 10%;
+        --input: 42 20% 92%;
+        --ring: 355 78% 56%;
+        --radius: 0.5rem;
+    }
+}
+
+@layer base {
+    * { @apply border-border; }
+    body { background: var(--cream); color: var(--ink); }
+    ::selection { background: var(--red); color: var(--cream); }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--cream); }
+::-webkit-scrollbar-thumb { background: #0a0a0a; border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: var(--red); }
+
+/* Ticker */
+@keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+.ticker-track { animation: ticker 40s linear infinite; }
+
+/* Floating wordmark */
+@keyframes rotate-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.rotate-slow { animation: rotate-slow 30s linear infinite; }
+
+/* Marquee vertical text */
+.vertical-text {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-size: 10px;
+}
+
+/* Brutal card */
+.brutal {
+    border: 1.5px solid var(--ink);
+    background: var(--cream);
+    transition: all 0.2s ease;
+}
+.brutal:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: 6px 6px 0 0 var(--ink);
+}
+
+.brutal-red { background: var(--red); color: var(--cream); border: 1.5px solid var(--ink); }
+.brutal-yellow { background: var(--yellow); color: var(--ink); border: 1.5px solid var(--ink); }
+.brutal-blue { background: var(--blue); color: var(--cream); border: 1.5px solid var(--ink); }
+.brutal-ink { background: var(--ink); color: var(--cream); border: 1.5px solid var(--ink); }
+
+/* Scroll indicator dots */
+.scroll-dots > span {
+    display: block;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--ink);
+    margin: 4px 0;
+    opacity: 0.3;
+}
+
+/* Masonry */
+.masonry { column-count: 2; column-gap: 1rem; }
+@media (min-width: 768px) { .masonry { column-count: 3; } }
+.masonry > * { break-inside: avoid; margin-bottom: 1rem; }
+
+.scroll-hidden::-webkit-scrollbar { display: none; }
+.scroll-hidden { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Giant decorative wordmark behind hero */
+.deco-mark {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "wght" 900;
+    font-style: italic;
+    letter-spacing: -0.04em;
+    color: var(--red);
+    line-height: 0.85;
+    text-transform: uppercase;
+    pointer-events: none;
+    opacity: 0.16;
+}
+
+/* Iridescent 3D wordmark (used as hero backdrop) */
+.noctra-3d {
+    position: relative;
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "wght" 900;
+    font-style: italic;
+    letter-spacing: -0.05em;
+    line-height: 0.85;
+    text-transform: uppercase;
+    filter: drop-shadow(0 30px 40px rgba(230,57,70,0.25));
+    will-change: transform;
+}
+.noctra-3d-face {
+    position: relative;
+    display: inline-block;
+    background: linear-gradient(130deg,
+        #e63946 0%,
+        #f4c542 20%,
+        #c1d9ff 38%,
+        #cbbfe8 52%,
+        #ffcad4 68%,
+        #f4c542 84%,
+        #e63946 100%);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(10,10,10,0.08);
+    animation: iridescent-shift 12s ease-in-out infinite;
+    z-index: 2;
+}
+.noctra-3d-shadow {
+    position: absolute;
+    inset: 0;
+    color: transparent;
+    -webkit-text-stroke: 0;
+    text-shadow:
+        2px 2px 0 rgba(10,10,10,0.06),
+        4px 4px 0 rgba(10,10,10,0.05),
+        6px 6px 0 rgba(230,57,70,0.10),
+        8px 8px 0 rgba(230,57,70,0.08),
+        10px 10px 0 rgba(29,78,216,0.06),
+        14px 14px 0 rgba(29,78,216,0.05),
+        18px 18px 40px rgba(10,10,10,0.15);
+    z-index: 1;
+}
+@keyframes iridescent-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* Word-mask scroll reveal */
+.reveal-mask { display: inline-block; overflow: hidden; vertical-align: top; }
+.reveal-mask > span { display: inline-block; will-change: transform; }
+
+/* Mobile polish — smaller hero on tight screens */
+@media (max-width: 640px) {
+    .display { letter-spacing: -0.03em; }
+    .vertical-text { font-size: 9px; letter-spacing: 0.15em; }
+    .ticker-track { padding-left: 90px !important; }
+}
+
+@layer base {
+    [data-debug-wrapper="true"] { display: contents !important; }
+}
