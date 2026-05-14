@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Bookmark, MapPin, ArrowUpRight } from "lucide-react";
 import TrustRing from "./TrustRing";
 import { formatFollowers, formatINR, trustBadge } from "../../lib/format";
+import { getAvatar } from "../../lib/avatar";
 
 export default function CreatorCard({ creator, onBookmark, index = 0 }) {
   const badge = trustBadge(creator.trust_score);
@@ -36,7 +37,7 @@ export default function CreatorCard({ creator, onBookmark, index = 0 }) {
       {/* Portrait */}
       <div className="relative aspect-[4/5] overflow-hidden bg-[#e8e0cd]">
         <img
-          src={creator.avatar}
+          src={getAvatar(creator)}
           alt={creator.name}
           className="w-full h-full object-cover group-hover:scale-[1.04] transition duration-500"
         />

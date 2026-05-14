@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Briefcase, Sparkles, Scissors, ArrowUpRight, Eye, EyeOff } from "lucide-react";
@@ -6,15 +6,50 @@ import { toast } from "sonner";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import BottomNav from "../components/layout/BottomNav";
-import { register, login, getUser } from "../lib/auth";
+import { register, login, getUser, saveSession } from "../lib/auth";
+import { googleSignIn } from "../lib/api";
 
 const ROLES = [
-  { key: "brand", label: "Brand", desc: "Hire creators, run campaigns, track every deal in one pipeline.", icon: Briefcase, color: "bg-[#f4c542]" },
-  { key: "creator", label: "Creator", desc: "Get discovered, accept escrow-secured deals, and get paid fast.", icon: Sparkles, color: "bg-[#e63946] text-[#efe8d8]" },
-  { key: "editor", label: "Editor / Pro", desc: "List your craft — video editing, reels, social management.", icon: Scissors, color: "bg-[#0a0a0a] text-[#efe8d8]" },
+  { key: "brand",   label: "Brand",         desc: "Hire creators, run campaigns, track every deal in one pipeline.", icon: Briefcase, color: "bg-[#f4c542]" },
+  { key: "creator", label: "Creator",        desc: "Get discovered by brands, apply to campaigns, and get paid for your content.", icon: Sparkles,  color: "bg-[#e63946] text-[#efe8d8]" },
+  { key: "editor",  label: "Editor / Pro",   desc: "List your craft — video editing, reels, social management.",     icon: Scissors,  color: "bg-[#0a0a0a] text-[#efe8d8]" },
 ];
 
 const NICHES = ["Fashion", "Fitness", "Food", "Tech", "Lifestyle", "Travel", "Beauty", "Gaming"];
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || "";
+
+function getStrength(pwd) {
+  if (!pwd) return null;
+  let score = 0;
+  if (pwd.length >= 8)          score++;
+  if (pwd.length >= 14)         score++;
+  if (/[A-Z]/.test(pwd))       score++;
+  if (/[0-9]/.test(pwd))       score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+  if (score <= 1) return { label: "Weak",   color: "#e63946", pct: 25 };
+  if (score === 2) return { label: "Fair",   color: "#f4c542", pct: 50 };
+  if (score === 3) return { label: "Good",   color: "#f4c542", pct: 75 };
+  return               { label: "Strong", color: "#22c55e", pct: 100 };
+}
+
+function makePassword() {
+  const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lower = "abcdefghijklmnopqrstuvwxyz";
+  const nums  = "0123456789";
+  const syms  = "!@#$%&*";
+  const all   = upper + lower + nums + syms;
+  const p = [
+    upper[Math.floor(Math.random() * upper.length)],
+    upper[Math.floor(Math.random() * upper.length)],
+    lower[Math.floor(Math.random() * lower.length)],
+    lower[Math.floor(Math.random() * lower.length)],
+    nums[Math.floor(Math.random() * nums.length)],
+    nums[Math.floor(Math.random() * nums.length)],
+    syms[Math.floor(Math.random() * syms.length)],
+  ];
+  for (let i = 0; i < 9; i++) p.push(all[Math.floor(Math.random() * all.length)]);
+  return p.sort(() => Math.random() - 0.5).join("");
+}
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -31,11 +66,78 @@ export default function Auth() {
   const [submitting, setSubmitting] = useState(false);
   const existing = getUser();
 
-  const redirect = (userRole) => {
-    if (userRole === "brand") navigate("/dashboard/brand");
-    else if (userRole === "creator") navigate("/dashboard/creator");
-    else navigate("/services");
+  const googleDivRef = useRef(null);
+  const googleCbRef = useRef(null); // always points to latest handleGoogleCredential
+
+  // isNew=true + verified=true → skip email OTP, go straight to onboarding
+  const redirect = (userRole, isNew = false, userEmail = "", verified = false) => {
+    if (isNew && !verified) {
+      navigate(`/verify-email?email=${encodeURIComponent(userEmail)}&role=${userRole}`);
+    } else if (isNew) {
+      if (userRole === "brand") navigate("/onboarding/brand");
+      else if (userRole === "creator") navigate("/onboarding/creator");
+      else navigate("/services");
+    } else {
+      if (userRole === "brand") navigate("/dashboard/brand");
+      else if (userRole === "creator") navigate("/dashboard/creator");
+      else navigate("/services");
+    }
   };
+
+  const handleGoogleCredential = async (response) => {
+    const currentRole = mode === "register" ? role : undefined;
+    // On register with no role: default to undefined — backend will prompt "account_not_found"
+    // and we'll show a helpful message
+    setSubmitting(true);
+    try {
+      const data = await googleSignIn(response.credential, currentRole);
+      saveSession(data.access_token, data.user);
+      toast.success(data.is_new ? `Welcome to Noctra, ${data.user.name}!` : `Welcome back, ${data.user.name}!`);
+      // Google accounts are pre-verified — skip /verify-email
+      redirect(data.user.role, data.is_new, data.user.email, true);
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      if (detail === "account_not_found") {
+        toast.error("New here? Pick a role below then try Google again");
+        setMode("register");
+      } else {
+        toast.error(detail || "Google sign-in failed");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Keep ref current so GSI callback always calls the latest closure
+  googleCbRef.current = handleGoogleCredential;
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+
+    const renderBtn = () => {
+      if (!window.google || !googleDivRef.current) return;
+      // Clear previous render before re-rendering
+      googleDivRef.current.innerHTML = "";
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (resp) => googleCbRef.current(resp),
+      });
+      window.google.accounts.id.renderButton(googleDivRef.current, {
+        type: "standard",
+        theme: "outline",
+        size: "large",
+        text: mode === "login" ? "signin_with" : "signup_with",
+        width: Math.min(googleDivRef.current.offsetWidth || 400, 400),
+      });
+    };
+
+    if (window.google) {
+      renderBtn();
+    } else {
+      window.addEventListener("gsi-ready", renderBtn, { once: true });
+      return () => window.removeEventListener("gsi-ready", renderBtn);
+    }
+  }, [mode, role]); // re-run when role changes so button appears as soon as form is visible
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -49,19 +151,22 @@ export default function Auth() {
       let user;
       if (mode === "register") {
         user = await register({ name, email, password, role, instagram_username: instagramUsername, niche, industry });
-        toast.success(`Welcome to Noctra, ${user.name}!`);
+        toast.success(`Welcome to Noctra, ${user.name}! Check your email for a verification code.`);
+        redirect(user.role, true, email);
+        return;
       } else {
         user = await login({ email, password });
         toast.success(`Welcome back, ${user.name}!`);
       }
       redirect(user.role);
     } catch (err) {
-      const msg = err?.response?.data?.detail || "Something went wrong";
-      toast.error(msg);
+      toast.error(err?.response?.data?.detail || "Something went wrong");
     } finally {
       setSubmitting(false);
     }
   };
+
+  const strength = mode === "register" ? getStrength(password) : null;
 
   return (
     <div className="min-h-screen bg-[#efe8d8] text-[#0a0a0a]" data-testid="auth-page">
@@ -89,6 +194,23 @@ export default function Auth() {
             </button>
           ))}
         </div>
+
+        {/* Google sign-in — always visible when configured */}
+        {GOOGLE_CLIENT_ID && (
+          <div className="mt-8 max-w-xl">
+            {mode === "register" && !role && (
+              <p className="mono text-[9px] uppercase tracking-widest text-[#7a7466] mb-3">
+                Sign up with Google — you'll pick a role after
+              </p>
+            )}
+            <div ref={googleDivRef} className="min-h-[44px]" />
+            <div className="flex items-center gap-3 mt-4">
+              <div className="flex-1 h-px bg-[#0a0a0a]/20" />
+              <span className="mono text-[9px] uppercase tracking-widest text-[#7a7466]">or continue with email</span>
+              <div className="flex-1 h-px bg-[#0a0a0a]/20" />
+            </div>
+          </div>
+        )}
 
         {/* Role picker — only for registration */}
         {mode === "register" && (
@@ -218,7 +340,33 @@ export default function Auth() {
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
+
+              {/* Password strength meter */}
+              {strength && (
+                <div className="mt-1.5">
+                  <div className="h-1 bg-[#0a0a0a]/10 overflow-hidden">
+                    <div
+                      className="h-full transition-all duration-300"
+                      style={{ width: `${strength.pct}%`, background: strength.color }}
+                    />
+                  </div>
+                  <div className="mono text-[9px] uppercase tracking-widest mt-0.5" style={{ color: strength.color }}>
+                    {strength.label}
+                  </div>
+                </div>
+              )}
             </Field>
+
+            {/* Suggest strong password — only on register */}
+            {mode === "register" && (
+              <button
+                type="button"
+                onClick={() => { setPassword(makePassword()); setShowPassword(true); }}
+                className="-mt-2 mb-4 mono text-[9px] uppercase tracking-widest text-[#e63946] hover:underline block"
+              >
+                ↻ Suggest a strong password
+              </button>
+            )}
 
             <button
               type="submit"
@@ -229,7 +377,7 @@ export default function Auth() {
               {submitting ? (mode === "register" ? "Creating account…" : "Signing in…") : (mode === "register" ? "Create account →" : "Sign in →")}
             </button>
 
-            <p className="mono text-[9px] uppercase tracking-widest text-[#7a7466] mt-3 text-center">
+            <p className="mono text-[9px] uppercase tracking-widest text-[#7a7466] mt-4 text-center">
               {mode === "register"
                 ? <>Already have an account? <button type="button" onClick={() => setMode("login")} className="underline text-[#0a0a0a]">Sign in</button></>
                 : <>New here? <button type="button" onClick={() => setMode("register")} className="underline text-[#0a0a0a]">Create account</button></>

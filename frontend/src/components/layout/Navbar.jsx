@@ -18,8 +18,8 @@ export default function Navbar() {
   const navItems = [
     { label: "Discover", to: "/discover" },
     { label: "Services", to: "/services" },
-    { label: "Brands", to: "/auth?role=brand" },
-    { label: "Creators", to: "/auth?role=creator" },
+    { label: "For Brands", to: "/auth?role=brand" },
+    { label: "For Creators", to: "/auth?role=creator" },
   ];
 
   return (
@@ -67,7 +67,7 @@ export default function Navbar() {
               className="px-4 py-1.5 rounded-full text-sm font-medium text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-[#efe8d8] transition"
               data-testid="dashboard-link"
             >
-              Studio
+              Dashboard
             </Link>
             <button
               onClick={() => { signOut(); navigate("/"); }}

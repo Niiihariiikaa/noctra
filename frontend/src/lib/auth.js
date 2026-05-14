@@ -13,7 +13,7 @@ export function getUser() {
   try { return JSON.parse(raw); } catch { return null; }
 }
 
-function saveSession(token, user) {
+export function saveSession(token, user) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
   api.defaults.headers.common["Authorization"] = `Bearer ${token}`;

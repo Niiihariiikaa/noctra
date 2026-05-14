@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { ArrowUpRight, Plus, Dumbbell, Shirt, UtensilsCrossed, Cpu, Coffee, Plane, Clapperboard, Megaphone, Star } from "lucide-react";
+import { ArrowUpRight, Plus, Dumbbell, Shirt, UtensilsCrossed, Cpu, Coffee, Plane, Clapperboard, Megaphone, Star, Calendar, Users } from "lucide-react";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import BottomNav from "../components/layout/BottomNav";
 import CreatorCard from "../components/common/CreatorCard";
 import IridescentWordmark from "../components/common/IridescentWordmark";
-import { getCreators, getCategories } from "../lib/api";
-import { formatFollowers } from "../lib/format";
+import { getCreators, getCategories, getCampaigns } from "../lib/api";
+import { formatFollowers, formatINR } from "../lib/format";
 
 const ICONS = { Dumbbell, Shirt, UtensilsCrossed, Cpu, Coffee, Plane, Clapperboard, Megaphone };
 
@@ -37,6 +37,7 @@ const STATIC_CREATORS = [
 export default function Landing() {
   const [creators, setCreators] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const watermarkY = useTransform(scrollYProgress, [0, 1], ["0%", "35%"]);
@@ -45,6 +46,7 @@ export default function Landing() {
   useEffect(() => {
     getCreators({ limit: 8 }).then(setCreators).catch(() => {});
     getCategories().then(setCategories).catch(() => {});
+    getCampaigns({ limit: 4, sort: "newest" }).then(setCampaigns).catch(() => {});
   }, []);
 
   return (
@@ -56,12 +58,12 @@ export default function Landing() {
         <div className="flex ticker-track whitespace-nowrap py-2 pl-[140px]">
           {Array.from({ length: 2 }).map((_, dup) => (
             <div key={dup} className="flex items-center gap-6 pr-6">
-              <span className="text-[#e63946]">◆ Launching Soon</span>
+              <span className="text-[#e63946]">◆ Now Live</span>
               <span>/</span>
-              <span>India's creator collab platform</span><span>/</span>
-              <span className="text-[#e63946]">Pre-register now — it's free</span><span>/</span>
+              <span>India's creator deal marketplace</span><span>/</span>
+              <span className="text-[#e63946]">Join free — it's open</span><span>/</span>
               <span>Brands · Creators · Editors</span><span>/</span>
-              <span>Escrow-backed deals</span><span>/</span>
+              <span>Verified deals</span><span>/</span>
               <span>Built in India</span><span>/</span>
               <span className="text-[#e63946]">Edition 01 · 2026</span><span>/</span>
             </div>
@@ -101,7 +103,7 @@ export default function Landing() {
             transition={{ delay: 0.4 }}
             className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-4"
           >
-            ♪ Issue 01 — Where brands meet creators
+            § Where brands meet creators
           </motion.div>
 
           <h1 className="display text-[3.5rem] sm:text-8xl lg:text-[11rem] leading-[0.85] font-black tracking-tighter" data-testid="hero-headline">
@@ -110,7 +112,7 @@ export default function Landing() {
                 initial={{ y: "110%" }} animate={{ y: 0 }}
                 transition={{ delay: 0.5, duration: 0.9, ease: [0.2, 0.8, 0.2, 1] }}
                 className="block"
-              >Shaping</motion.span>
+              >Let's make</motion.span>
             </div>
             <div className="reveal-mask block">
               <motion.span
@@ -118,7 +120,7 @@ export default function Landing() {
                 transition={{ delay: 0.65, duration: 0.9, ease: [0.2, 0.8, 0.2, 1] }}
                 className="block"
               >
-                the <span className="italic text-[#e63946]">creator</span>
+                something
               </motion.span>
             </div>
             <div className="reveal-mask block">
@@ -127,7 +129,7 @@ export default function Landing() {
                 transition={{ delay: 0.8, duration: 0.9, ease: [0.2, 0.8, 0.2, 1] }}
                 className="block"
               >
-                normal<span className="text-[#e63946]">.</span>
+                <span className="italic text-[#e63946]">stupid</span> good<span className="text-[#e63946]">.</span>
               </motion.span>
             </div>
           </h1>
@@ -139,7 +141,7 @@ export default function Landing() {
             className="grid md:grid-cols-[1fr_auto] gap-6 md:gap-10 items-end mt-8 md:mt-10"
           >
             <p className="text-sm md:text-lg max-w-md text-[#0a0a0a]/75 leading-relaxed">
-              A remote-first collaborative hub for India's most interesting creators, editors and social media pros. Collab. Create. Get paid<span className="text-[#e63946]">.</span>
+              India's creator deal marketplace. Brands find the right creators, creators find deals worth their time. No cold DMs, no chasing payments<span className="text-[#e63946]">.</span>
             </p>
 
             <div className="flex flex-wrap gap-3">
@@ -218,7 +220,7 @@ export default function Landing() {
               this week.
             </h2>
             <Link to="/discover" className="mono text-xs uppercase tracking-widest text-[#efe8d8] hover:text-[#e63946] transition border-b border-[#efe8d8]/40 pb-1 w-fit">
-              See all 3,200 →
+              Browse all creators →
             </Link>
           </div>
 
@@ -233,18 +235,78 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* LATEST CAMPAIGNS */}
+      {campaigns.length > 0 && (
+        <section className="max-w-7xl mx-auto px-5 md:px-10 py-24 md:py-32" data-testid="campaigns-section">
+          <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ 03 — Open for applications</div>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+            <h2 className="display text-5xl md:text-7xl lg:text-8xl font-black leading-[0.9]">
+              Fresh<br /><span className="italic text-[#e63946]">briefs.</span>
+            </h2>
+            <Link to="/discover" className="inline-flex items-center gap-2 mono text-xs uppercase tracking-widest border-b border-[#0a0a0a] hover:opacity-70 transition pb-1 w-fit">
+              Browse all <ArrowUpRight size={12} />
+            </Link>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 border-t border-l border-[#0a0a0a]">
+            {campaigns.map((c, i) => (
+              <motion.div
+                key={c.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.07 }}
+              >
+                <Link
+                  to={`/campaigns/${c.id}`}
+                  className="group border-r border-b border-[#0a0a0a] p-6 flex flex-col justify-between min-h-[260px] hover:bg-[#0a0a0a] hover:text-[#efe8d8] transition-colors block"
+                >
+                  <div>
+                    <div className="mono text-[9px] uppercase tracking-[0.25em] text-[#e63946] mb-3">{c.platform} · {c.target_niche}</div>
+                    <h3 className="display text-2xl font-black leading-tight mb-2 group-hover:text-[#efe8d8]">{c.name}</h3>
+                    <p className="text-xs text-[#0a0a0a]/60 group-hover:text-[#efe8d8]/60 line-clamp-2 leading-relaxed">{c.description}</p>
+                  </div>
+                  <div className="mt-4 space-y-1.5">
+                    <div className="display text-2xl font-black text-[#e63946]">{formatINR(c.budget_min)}–{formatINR(c.budget_max)}</div>
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1 mono text-[8px] uppercase tracking-widest text-[#7a7466] group-hover:text-[#efe8d8]/50">
+                        <Calendar size={9} />
+                        {new Date(c.application_deadline).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                      </span>
+                      <span className="flex items-center gap-1 mono text-[8px] uppercase tracking-widest text-[#7a7466] group-hover:text-[#efe8d8]/50">
+                        <Users size={9} />
+                        {c.applicant_count || 0} applied
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="mt-8 text-center">
+            <Link
+              to="/auth?role=creator"
+              className="inline-flex items-center gap-2 px-6 py-3.5 border border-[#0a0a0a] mono text-[10px] uppercase tracking-widest hover:bg-[#0a0a0a] hover:text-[#efe8d8] transition"
+            >
+              Join as creator to apply →
+            </Link>
+          </div>
+        </section>
+      )}
+
       {/* HOW IT WORKS */}
       <section className="max-w-7xl mx-auto px-5 md:px-10 py-24 md:py-32" data-testid="how-section">
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ 03 — How it works</div>
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ 04 — How it works</div>
         <h2 className="display text-5xl md:text-7xl lg:text-8xl font-black leading-[0.9] mb-12 max-w-4xl">
           Three steps.<br/>Zero <span className="italic text-[#e63946]">chaos</span>.
         </h2>
 
         <div className="grid md:grid-cols-3 gap-0 border-t border-[#0a0a0a]">
           {[
-            { num: "01", title: "Search", desc: "Filter by niche, engagement, price. Our trust score badges help you spot the real ones fast.", bg: "bg-[#efe8d8]" },
-            { num: "02", title: "Connect", desc: "Send a collab brief, negotiate inside the app, lock the deal. No DMs, no lost threads.", bg: "bg-[#f4c542]" },
-            { num: "03", title: "Get paid", desc: "Escrow-backed payments via Razorpay. Released once deliverables are approved, instantly.", bg: "bg-[#e63946] text-[#efe8d8]" },
+            { num: "01", title: "Discover", desc: "Browse creators by niche, city, engagement rate and price. Trust score badges show you who delivers.", bg: "bg-[#efe8d8]" },
+            { num: "02", title: "Connect", desc: "Send a collab brief directly on the platform. Negotiate, agree on deliverables, and lock the deal.", bg: "bg-[#f4c542]" },
+            { num: "03", title: "Get paid", desc: "Creator submits content, brand approves it. Payment is settled directly — tracked on Noctra for accountability.", bg: "bg-[#e63946] text-[#efe8d8]" },
           ].map((s, i) => (
             <motion.div
               key={s.num}
@@ -266,7 +328,7 @@ export default function Landing() {
 
       {/* ABOUT US */}
       <section className="max-w-7xl mx-auto px-5 md:px-10 py-24 md:py-32" data-testid="about-section">
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ 04 — About Noctra</div>
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ 05 — About Noctra</div>
 
         <div className="grid md:grid-cols-2 gap-12 md:gap-20 items-start mb-16">
           <div>
@@ -282,7 +344,7 @@ export default function Landing() {
               We started with a simple observation: India has millions of creators who are seriously good at what they do, and thousands of brands that genuinely want to work with them — but no infrastructure that makes it feel human. Noctra is that infrastructure.
             </p>
             <p className="text-base md:text-lg text-[#0a0a0a]/80 leading-relaxed">
-              Every creator on the platform carries a <span className="font-bold text-[#0a0a0a]">Trust Score</span> — built from delivery history, engagement authenticity and brand feedback. Every deal runs through <span className="font-bold text-[#0a0a0a]">escrow-backed payments</span>, so money moves only when work is done and approved.
+              Every creator on the platform carries a <span className="font-bold text-[#0a0a0a]">Trust Score</span> — built from delivery history, engagement authenticity and brand feedback. Every deal is tracked end-to-end, so brands and creators always know exactly where things stand.
             </p>
             <div className="pt-2">
               <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#7a7466]">Founded 2026 · Remote-first · Made in India</div>
@@ -295,23 +357,23 @@ export default function Landing() {
             {
               title: "For Brands",
               bg: "bg-[#f4c542]",
-              desc: "Search 3,200+ vetted creators by niche, city, engagement rate and budget. Send a collab brief in minutes. Track every deal in your pipeline dashboard — from first request to final payment.",
-              cta: "Start hiring →",
+              desc: "Browse verified creators by niche, city, engagement rate and budget. Send a collab brief in minutes. Track every deal from first request to delivery — all in one dashboard.",
+              cta: "Start as brand →",
               to: "/auth?role=brand",
             },
             {
               title: "For Creators",
               bg: "bg-[#e63946]",
               fg: "text-[#efe8d8]",
-              desc: "Get discovered by brands that actually fit your audience. Negotiate terms inside the platform, accept escrow-secured deals, and get paid the moment your deliverable is approved.",
-              cta: "Join the roster →",
+              desc: "Get discovered by brands that fit your audience. Apply to campaigns, negotiate terms, and get paid once the brand approves your content. No middlemen, no delays.",
+              cta: "Join as creator →",
               to: "/auth?role=creator",
             },
             {
               title: "For Editors & Pros",
               bg: "bg-[#0a0a0a]",
               fg: "text-[#efe8d8]",
-              desc: "Video editors, reel cutters, social media managers — list your services, set your price, and connect with creators and brands who need the craft behind the content.",
+              desc: "Video editors, reel cutters, social media managers — list your services, set your rates, and connect with creators and brands who need the skill behind the content.",
               cta: "List your services →",
               to: "/services",
             },
@@ -341,16 +403,16 @@ export default function Landing() {
 
       {/* FINAL CTA */}
       <section className="py-20 md:py-32 text-center px-5" data-testid="final-cta">
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ 05 — Ready?</div>
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ Ready to start?</div>
         <h2 className="display text-[2.75rem] sm:text-8xl lg:text-[9rem] leading-[0.85] font-black max-w-5xl mx-auto">
-          Let's make<br/>something<br/><span className="italic text-[#e63946]">stupid good</span>.
+          Your next<br/>collab starts<br/><span className="italic text-[#e63946]">here</span>.
         </h2>
         <div className="mt-10 flex flex-wrap gap-3 justify-center">
           <Link to="/auth?role=brand" className="inline-flex items-center gap-2 px-6 md:px-7 py-3.5 md:py-4 bg-[#0a0a0a] text-[#efe8d8] font-bold uppercase tracking-widest text-xs hover:bg-[#e63946] transition min-h-[44px]">
-            Start as brand <Plus size={14} />
+            Join as brand <Plus size={14} />
           </Link>
           <Link to="/auth?role=creator" className="inline-flex items-center gap-2 px-6 md:px-7 py-3.5 md:py-4 border border-[#0a0a0a] font-bold uppercase tracking-widest text-xs hover:bg-[#0a0a0a] hover:text-[#efe8d8] transition min-h-[44px]">
-            Start as creator
+            Join as creator
           </Link>
         </div>
       </section>

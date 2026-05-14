@@ -1,10 +1,14 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Query, Depends
+from fastapi.responses import StreamingResponse
+import urllib.parse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import random
+import string
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -14,12 +18,13 @@ import hmac
 import hashlib
 
 import razorpay
+import requests as http
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+load_dotenv(ROOT_DIR / '.env', override=True)
 
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
@@ -41,6 +46,77 @@ if RZP_KEY_ID and RZP_KEY_SECRET:
     except Exception:
         rzp_client = None
 
+# ---------- Resend (email) ----------
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+RESEND_FROM    = os.environ.get("RESEND_FROM", "Noctra <onboarding@resend.dev>")
+
+def send_otp_email(to_email: str, otp: str) -> bool:
+    if not RESEND_API_KEY:
+        logger.info(f"[OTP] No RESEND_API_KEY — OTP for {to_email}: {otp}")
+        return True
+    try:
+        import resend as _resend
+        _resend.api_key = RESEND_API_KEY
+        _resend.Emails.send({
+            "from": RESEND_FROM,
+            "to": [to_email],
+            "subject": "Your Noctra verification code",
+            "html": f"""
+<div style="font-family:monospace;max-width:480px;margin:0 auto;padding:40px 24px;background:#efe8d8;color:#0a0a0a">
+  <div style="font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:#e63946;margin-bottom:24px">§ Noctra</div>
+  <h1 style="font-size:40px;font-weight:900;margin:0 0 16px">Verify your<br/><span style="font-style:italic;color:#e63946">email</span>.</h1>
+  <p style="margin:0 0 24px;color:#7a7466;font-size:14px">Use this code to complete your registration. Valid for 10 minutes.</p>
+  <div style="font-size:36px;font-weight:900;letter-spacing:0.2em;border:2px solid #0a0a0a;padding:20px;text-align:center;background:#fff">{otp}</div>
+  <p style="margin:24px 0 0;font-size:11px;color:#7a7466">If you didn't sign up for Noctra, ignore this email.</p>
+</div>""",
+        })
+        logger.info(f"OTP sent to {to_email}")
+        return True
+    except Exception as e:
+        logger.error(f"Resend error: {e}")
+        return False
+
+
+# ---------- Google OAuth ----------
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+try:
+    from google.oauth2 import id_token as _g_id_token
+    from google.auth.transport import requests as _g_requests
+    _GOOGLE_AUTH_OK = True
+except ImportError:
+    _GOOGLE_AUTH_OK = False
+
+
+# ---------- Phyllo ----------
+PHYLLO_CLIENT_ID = os.environ.get("PHYLLO_CLIENT_ID", "")
+PHYLLO_CLIENT_SECRET = os.environ.get("PHYLLO_CLIENT_SECRET", "")
+PHYLLO_BASE_URL = os.environ.get("PHYLLO_BASE_URL", "https://api.getphyllo.com")
+INSTAGRAM_WORK_PLATFORM_ID = "9bb8913b-ddd9-430b-a66a-d74d846e6c66"
+
+
+def phyllo_post(path: str, body: dict) -> dict:
+    r = http.post(
+        f"{PHYLLO_BASE_URL}{path}",
+        json=body,
+        auth=(PHYLLO_CLIENT_ID, PHYLLO_CLIENT_SECRET),
+        headers={"Content-Type": "application/json"},
+        timeout=15,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
+def phyllo_get(path: str, params: dict = None) -> dict:
+    r = http.get(
+        f"{PHYLLO_BASE_URL}{path}",
+        params=params or {},
+        auth=(PHYLLO_CLIENT_ID, PHYLLO_CLIENT_SECRET),
+        timeout=15,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
 # ---------- JWT ----------
 JWT_SECRET = os.environ.get("JWT_SECRET", "change-me-in-production")
 JWT_ALGORITHM = "HS256"
@@ -59,11 +135,77 @@ class UserCreate(BaseModel):
     instagram_username: Optional[str] = None
     niche: Optional[str] = None
     industry: Optional[str] = None
+    gst_number: Optional[str] = None
+
+
+class OnboardingCreator(BaseModel):
+    bio: Optional[str] = None
+    deal_types: List[str] = []   # "paid_promotion" | "barter" | "affiliate"
+    min_rate: Optional[int] = None
+    city: Optional[str] = None
+
+
+class OnboardingBrand(BaseModel):
+    description: Optional[str] = None
+    budget_min: Optional[int] = None
+    budget_max: Optional[int] = None
+    target_audience: Optional[str] = None
+    whatsapp: Optional[str] = None
+
+
+class CampaignCreate(BaseModel):
+    name: str
+    description: str
+    target_niche: str
+    platform: str = "Instagram"
+    deliverables: str
+    concepts: List[dict] = []
+    budget_min: int
+    budget_max: int
+    application_deadline: str
+    content_deadline: str
+    requirements: Optional[str] = None
+
+
+class ApplicationCreate(BaseModel):
+    campaign_id: str
+    pitch_note: Optional[str] = None
+
+
+class ApplicationReview(BaseModel):
+    action: str  # "accept" | "decline"
+
+
+class ContentSubmit(BaseModel):
+    content_link: str
+
+
+class RevisionRequest(BaseModel):
+    note: str
+
+
+class DealRoomStatusUpdate(BaseModel):
+    status: str
+    instagram_post_url: Optional[str] = None
 
 
 class UserLogin(BaseModel):
     email: str
     password: str
+
+
+class OTPRequest(BaseModel):
+    email: str
+
+
+class OTPVerify(BaseModel):
+    email: str
+    otp: str
+
+
+class GoogleAuth(BaseModel):
+    credential: str
+    role: Optional[str] = None
 
 
 class DealCreate(BaseModel):
@@ -148,8 +290,19 @@ async def register(payload: UserCreate):
         user["niche"] = payload.niche
     if payload.industry:
         user["industry"] = payload.industry
+    if payload.gst_number:
+        user["gst_number"] = payload.gst_number
+    user["onboarding_complete"] = False
+    user["email_verified"] = False
 
     await db.users.insert_one(dict(user))
+
+    # Send OTP immediately after registration
+    otp = "".join(random.choices(string.digits, k=6))
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+    await db.otps.delete_many({"email": payload.email})
+    await db.otps.insert_one({"email": payload.email, "otp": otp, "expires_at": expires_at})
+    send_otp_email(payload.email, otp)
 
     # Auto-create a profile in the matching collection so they show up on the platform
     if payload.role == "creator":
@@ -206,6 +359,107 @@ async def login(payload: UserLogin):
 @api_router.get("/auth/me")
 async def me(current_user: dict = Depends(get_current_user)):
     return current_user
+
+
+@api_router.post("/auth/send-otp")
+async def send_otp(payload: OTPRequest):
+    user = await db.users.find_one({"email": payload.email})
+    if not user:
+        raise HTTPException(404, "No account with that email")
+    if user.get("email_verified"):
+        return {"message": "Already verified"}
+    otp = "".join(random.choices(string.digits, k=6))
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+    await db.otps.delete_many({"email": payload.email})
+    await db.otps.insert_one({"email": payload.email, "otp": otp, "expires_at": expires_at})
+    send_otp_email(payload.email, otp)
+    return {"message": "OTP sent"}
+
+
+@api_router.post("/auth/verify-otp")
+async def verify_otp(payload: OTPVerify):
+    record = await db.otps.find_one({"email": payload.email, "otp": payload.otp})
+    if not record:
+        raise HTTPException(400, "Invalid or expired OTP")
+    if datetime.now(timezone.utc) > record["expires_at"].replace(tzinfo=timezone.utc):
+        raise HTTPException(400, "OTP has expired — request a new one")
+    await db.users.update_one({"email": payload.email}, {"$set": {"email_verified": True}})
+    await db.otps.delete_many({"email": payload.email})
+    user = await db.users.find_one({"email": payload.email}, {"_id": 0, "password_hash": 0})
+    token = create_access_token({"sub": user["id"], "email": user["email"], "role": user["role"]})
+    return {"access_token": token, "token_type": "bearer", "user": user}
+
+
+@api_router.delete("/auth/me")
+async def delete_account(current_user: dict = Depends(get_current_user)):
+    uid = current_user["id"]
+    email = current_user.get("email", "")
+    await db.users.delete_one({"id": uid})
+    await db.creators.delete_one({"user_id": uid})
+    await db.brands.delete_one({"user_id": uid})
+    await db.otps.delete_many({"email": email})
+    return {"message": "Account deleted"}
+
+
+@api_router.post("/auth/google")
+async def google_auth(payload: GoogleAuth):
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(503, "Google Sign-In not configured")
+    if not _GOOGLE_AUTH_OK:
+        raise HTTPException(503, "google-auth package not installed")
+    try:
+        idinfo = _g_id_token.verify_oauth2_token(
+            payload.credential, _g_requests.Request(), GOOGLE_CLIENT_ID
+        )
+    except Exception as e:
+        logger.error(f"Google token verify failed: {e}")
+        raise HTTPException(401, "Invalid Google credential")
+
+    email = idinfo.get("email")
+    name = idinfo.get("name") or (email.split("@")[0] if email else "User")
+    google_id = idinfo.get("sub")
+    if not email:
+        raise HTTPException(400, "Google account has no email")
+
+    existing = await db.users.find_one({"email": email})
+    if existing:
+        user_out = {k: v for k, v in existing.items() if k not in ("password_hash", "_id")}
+        token = create_access_token({"sub": existing["id"], "email": existing["email"], "role": existing["role"]})
+        return {"access_token": token, "token_type": "bearer", "user": user_out, "is_new": False}
+
+    if not payload.role:
+        raise HTTPException(400, "account_not_found")
+
+    user_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    new_user = {
+        "id": user_id, "name": name, "email": email,
+        "role": payload.role, "google_id": google_id,
+        "email_verified": True, "onboarding_complete": False, "created_at": now,
+    }
+    await db.users.insert_one(dict(new_user))
+
+    if payload.role == "creator":
+        await db.creators.insert_one({
+            "id": user_id, "user_id": user_id, "name": name,
+            "niche": "", "city": "", "bio": "",
+            "avatar": f"https://api.dicebear.com/7.x/avataaars/svg?seed={user_id}&backgroundColor=00d4c8",
+            "cover": "", "followers": 0, "avg_likes": 0, "avg_comments": 0,
+            "engagement_rate": 0.0, "completeness": 20, "trust_score": 0,
+            "pricing": {"story": 0, "post": 0, "reel": 0},
+            "portfolio": [], "brands_worked_with": [], "instagram_handle": "", "created_at": now,
+        })
+    elif payload.role == "brand":
+        await db.brands.insert_one({
+            "id": user_id, "user_id": user_id, "name": name,
+            "industry": "", "budget_range": "", "tagline": "",
+            "logo_color": "#00d4c8",
+            "logo_initial": name[0].upper() if name else "B", "created_at": now,
+        })
+
+    user_out = {k: v for k, v in new_user.items() if k != "_id"}
+    token = create_access_token({"sub": user_id, "email": email, "role": payload.role})
+    return {"access_token": token, "token_type": "bearer", "user": user_out, "is_new": True}
 
 
 # ---------- Routes ----------
@@ -442,6 +696,658 @@ async def verify_payment(payload: VerifyPayload, current_user: dict = Depends(ge
     if payload.deal_id:
         await db.deals.update_one({"id": payload.deal_id}, {"$set": {"status": "Confirmed", "escrow": True}})
     return {"ok": True, "status": "paid"}
+
+
+# ---------- Onboarding ----------
+@api_router.patch("/onboarding/creator")
+async def onboard_creator(payload: OnboardingCreator, current_user: dict = Depends(get_current_user)):
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None and v != []}
+    updates["onboarding_complete"] = True
+    await db.users.update_one({"id": current_user["id"]}, {"$set": updates})
+    await db.creators.update_one({"user_id": current_user["id"]}, {"$set": updates})
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "password_hash": 0})
+    return user
+
+
+@api_router.patch("/onboarding/brand")
+async def onboard_brand(payload: OnboardingBrand, current_user: dict = Depends(get_current_user)):
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if payload.budget_min and payload.budget_max:
+        updates["budget_range"] = f"₹{payload.budget_min//1000}K–₹{payload.budget_max//1000}K"
+    updates["onboarding_complete"] = True
+    await db.users.update_one({"id": current_user["id"]}, {"$set": updates})
+    await db.brands.update_one({"user_id": current_user["id"]}, {"$set": updates})
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "password_hash": 0})
+    return user
+
+
+# ---------- Campaigns ----------
+@api_router.post("/campaigns")
+async def create_campaign(payload: CampaignCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "brand":
+        raise HTTPException(403, "Only brands can create campaigns")
+    brand = await db.brands.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    campaign = payload.model_dump()
+    campaign["id"] = str(uuid.uuid4())
+    campaign["brand_id"] = current_user["id"]
+    campaign["brand_name"] = brand["name"] if brand else current_user["name"]
+    campaign["brand_logo_color"] = brand["logo_color"] if brand else "#00d4c8"
+    campaign["status"] = "open"
+    campaign["applicant_count"] = 0
+    campaign["created_at"] = datetime.now(timezone.utc).isoformat()
+    await db.campaigns.insert_one(dict(campaign))
+    campaign.pop("_id", None)
+    return campaign
+
+
+@api_router.get("/campaigns")
+async def get_campaigns(
+    niche: Optional[str] = Query(None),
+    platform: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    brand_id: Optional[str] = Query(None),
+    limit: int = Query(200, ge=1, le=200),
+    sort: Optional[str] = Query(None),
+):
+    query = {}
+    if niche:
+        query["target_niche"] = {"$in": [n.strip() for n in niche.split(",")]}
+    if platform:
+        query["platform"] = platform
+    if status:
+        query["status"] = status
+    else:
+        query["status"] = "open"
+    if brand_id:
+        query["brand_id"] = brand_id
+        query.pop("status", None)
+    items = await db.campaigns.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    return items
+
+
+@api_router.get("/campaigns/{campaign_id}")
+async def get_campaign(campaign_id: str):
+    c = await db.campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    if not c:
+        raise HTTPException(404, "Campaign not found")
+    return c
+
+
+@api_router.patch("/campaigns/{campaign_id}")
+async def update_campaign(campaign_id: str, payload: dict, current_user: dict = Depends(get_current_user)):
+    campaign = await db.campaigns.find_one({"id": campaign_id})
+    if not campaign or campaign["brand_id"] != current_user["id"]:
+        raise HTTPException(403, "Not your campaign")
+    await db.campaigns.update_one({"id": campaign_id}, {"$set": payload})
+    return await db.campaigns.find_one({"id": campaign_id}, {"_id": 0})
+
+
+# ---------- Applications ----------
+@api_router.post("/applications")
+async def apply_to_campaign(payload: ApplicationCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "creator":
+        raise HTTPException(403, "Only creators can apply")
+    existing = await db.applications.find_one({"campaign_id": payload.campaign_id, "creator_id": current_user["id"]})
+    if existing:
+        raise HTTPException(400, "Already applied to this campaign")
+    creator = await db.creators.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    campaign = await db.campaigns.find_one({"id": payload.campaign_id}, {"_id": 0})
+    if not campaign:
+        raise HTTPException(404, "Campaign not found")
+    application = {
+        "id": str(uuid.uuid4()),
+        "campaign_id": payload.campaign_id,
+        "campaign_name": campaign["name"],
+        "brand_id": campaign["brand_id"],
+        "brand_name": campaign["brand_name"],
+        "creator_id": current_user["id"],
+        "creator_name": current_user["name"],
+        "creator_niche": creator["niche"] if creator else current_user.get("niche", ""),
+        "creator_instagram": creator["instagram_handle"] if creator else current_user.get("instagram_username", ""),
+        "creator_avatar": creator["avatar"] if creator else "",
+        "pitch_note": payload.pitch_note,
+        "status": "pending",   # pending | accepted | declined
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.applications.insert_one(dict(application))
+    await db.campaigns.update_one({"id": payload.campaign_id}, {"$inc": {"applicant_count": 1}})
+    application.pop("_id", None)
+    return application
+
+
+@api_router.get("/applications")
+async def get_applications(
+    campaign_id: Optional[str] = Query(None),
+    creator_id: Optional[str] = Query(None),
+    brand_id: Optional[str] = Query(None),
+):
+    query = {}
+    if campaign_id:
+        query["campaign_id"] = campaign_id
+    if creator_id:
+        query["creator_id"] = creator_id
+    if brand_id:
+        query["brand_id"] = brand_id
+    items = await db.applications.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return items
+
+
+@api_router.patch("/applications/{application_id}")
+async def review_application(application_id: str, payload: ApplicationReview, current_user: dict = Depends(get_current_user)):
+    app = await db.applications.find_one({"id": application_id})
+    if not app or app["brand_id"] != current_user["id"]:
+        raise HTTPException(403, "Not your application to review")
+    if payload.action not in ("accept", "decline"):
+        raise HTTPException(400, "Action must be accept or decline")
+
+    new_status = "accepted" if payload.action == "accept" else "declined"
+    await db.applications.update_one({"id": application_id}, {"$set": {"status": new_status}})
+
+    deal_room = None
+    if payload.action == "accept":
+        brand = await db.brands.find_one({"user_id": current_user["id"]}, {"_id": 0})
+        campaign = await db.campaigns.find_one({"id": app["campaign_id"]}, {"_id": 0})
+        deal_room = {
+            "id": str(uuid.uuid4()),
+            "application_id": application_id,
+            "campaign_id": app["campaign_id"],
+            "campaign_name": app["campaign_name"],
+            "brand_id": current_user["id"],
+            "brand_name": app["brand_name"],
+            "brand_logo_color": brand["logo_color"] if brand else "#00d4c8",
+            "brand_whatsapp": brand.get("whatsapp", "") if brand else "",
+            "creator_id": app["creator_id"],
+            "creator_name": app["creator_name"],
+            "creator_avatar": app["creator_avatar"],
+            "deliverables": campaign["deliverables"] if campaign else "",
+            "content_deadline": campaign["content_deadline"] if campaign else "",
+            "concepts": campaign.get("concepts", []) if campaign else [],
+            "requirements": campaign.get("requirements", "") if campaign else "",
+            "content_link": None,
+            "instagram_post_url": None,
+            "revisions": [],
+            "revision_count": 0,
+            "status": "Matched",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.deal_rooms.insert_one(dict(deal_room))
+        deal_room.pop("_id", None)
+
+    app_out = await db.applications.find_one({"id": application_id}, {"_id": 0})
+    return {"application": app_out, "deal_room": deal_room}
+
+
+# ---------- Deal Rooms ----------
+@api_router.get("/deal-rooms")
+async def get_deal_rooms(current_user: dict = Depends(get_current_user)):
+    query = {"brand_id": current_user["id"]} if current_user["role"] == "brand" else {"creator_id": current_user["id"]}
+    items = await db.deal_rooms.find(query, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return items
+
+
+@api_router.get("/deal-rooms/{room_id}")
+async def get_deal_room(room_id: str, current_user: dict = Depends(get_current_user)):
+    room = await db.deal_rooms.find_one({"id": room_id}, {"_id": 0})
+    if not room:
+        raise HTTPException(404, "Deal room not found")
+    if room["brand_id"] != current_user["id"] and room["creator_id"] != current_user["id"]:
+        raise HTTPException(403, "Access denied")
+    return room
+
+
+@api_router.patch("/deal-rooms/{room_id}/submit")
+async def submit_content(room_id: str, payload: ContentSubmit, current_user: dict = Depends(get_current_user)):
+    room = await db.deal_rooms.find_one({"id": room_id})
+    if not room or room["creator_id"] != current_user["id"]:
+        raise HTTPException(403, "Not your deal room")
+    await db.deal_rooms.update_one(
+        {"id": room_id},
+        {"$set": {"content_link": payload.content_link, "status": "Content Submitted", "submitted_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return await db.deal_rooms.find_one({"id": room_id}, {"_id": 0})
+
+
+@api_router.patch("/deal-rooms/{room_id}/review")
+async def review_content(room_id: str, payload: RevisionRequest, current_user: dict = Depends(get_current_user)):
+    room = await db.deal_rooms.find_one({"id": room_id})
+    if not room or room["brand_id"] != current_user["id"]:
+        raise HTTPException(403, "Not your deal room")
+    if payload.note.lower() == "approve":
+        await db.deal_rooms.update_one({"id": room_id}, {"$set": {"status": "Approved"}})
+    else:
+        if room.get("revision_count", 0) >= 2:
+            await db.deal_rooms.update_one({"id": room_id}, {"$set": {"status": "Flagged — Admin Review"}})
+        else:
+            revision = {"note": payload.note, "at": datetime.now(timezone.utc).isoformat()}
+            await db.deal_rooms.update_one(
+                {"id": room_id},
+                {"$set": {"status": "Under Review"}, "$push": {"revisions": revision}, "$inc": {"revision_count": 1}}
+            )
+    return await db.deal_rooms.find_one({"id": room_id}, {"_id": 0})
+
+
+@api_router.patch("/deal-rooms/{room_id}/status")
+async def update_deal_room_status(room_id: str, payload: DealRoomStatusUpdate, current_user: dict = Depends(get_current_user)):
+    room = await db.deal_rooms.find_one({"id": room_id})
+    if not room:
+        raise HTTPException(404, "Deal room not found")
+    if room["brand_id"] != current_user["id"] and room["creator_id"] != current_user["id"]:
+        raise HTTPException(403, "Access denied")
+    updates = {"status": payload.status}
+    if payload.instagram_post_url:
+        updates["instagram_post_url"] = payload.instagram_post_url
+    await db.deal_rooms.update_one({"id": room_id}, {"$set": updates})
+    return await db.deal_rooms.find_one({"id": room_id}, {"_id": 0})
+
+
+# ---------- Phyllo routes ----------
+class PhylloFetchProfile(BaseModel):
+    account_id: str
+
+
+@api_router.post("/phyllo/create-user")
+async def phyllo_create_user(current_user: dict = Depends(get_current_user)):
+    if current_user.get("role") != "creator":
+        raise HTTPException(403, "Only creators can connect Instagram")
+    if not PHYLLO_CLIENT_ID:
+        raise HTTPException(503, "Phyllo not configured")
+
+    creator = await db.creators.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    phyllo_user_id = creator.get("phyllo_user_id") if creator else None
+
+    # Create Phyllo user if not already created
+    if not phyllo_user_id:
+        try:
+            user_data = phyllo_post("/v1/users", {
+                "name": current_user["name"],
+                "external_id": current_user["id"],
+            })
+            phyllo_user_id = user_data["id"]
+            await db.creators.update_one(
+                {"user_id": current_user["id"]},
+                {"$set": {"phyllo_user_id": phyllo_user_id}},
+            )
+        except Exception as e:
+            logger.error(f"Phyllo create user failed: {e}")
+            raise HTTPException(502, "Failed to register with Phyllo")
+
+    # Create SDK token
+    try:
+        token_data = phyllo_post("/v1/sdk-tokens", {
+            "user_id": phyllo_user_id,
+            "products": ["IDENTITY", "ENGAGEMENT"],
+        })
+        return {"sdk_token": token_data["sdk_token"], "phyllo_user_id": phyllo_user_id}
+    except Exception as e:
+        logger.error(f"Phyllo SDK token failed: {e}")
+        raise HTTPException(502, "Failed to get Phyllo token")
+
+
+@api_router.post("/phyllo/fetch-profile")
+async def phyllo_fetch_profile(
+    payload: PhylloFetchProfile,
+    current_user: dict = Depends(get_current_user),
+):
+    if current_user.get("role") != "creator":
+        raise HTTPException(403, "Only creators can fetch Instagram profile")
+    creator = await db.creators.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    if not creator:
+        raise HTTPException(404, "Creator profile not found")
+
+    phyllo_user_id = creator.get("phyllo_user_id")
+    if not phyllo_user_id:
+        raise HTTPException(400, "No Phyllo user found — connect Instagram first")
+
+    try:
+        profile_data = phyllo_get("/v1/profiles", {
+            "account_id": payload.account_id,
+            "user_id": phyllo_user_id,
+        })
+        profiles = profile_data.get("data", [])
+        if not profiles:
+            raise HTTPException(404, "No profile data returned from Phyllo")
+
+        profile = profiles[0]
+        handle = profile.get("username", "")
+        followers = profile.get("follower_count", 0)
+        media_count = profile.get("content_count", 0)
+
+        updates = {
+            "instagram_handle": f"@{handle}" if handle and not handle.startswith("@") else handle,
+            "instagram_verified": True,
+            "phyllo_account_id": payload.account_id,
+            "followers": followers,
+        }
+        if media_count:
+            updates["media_count"] = media_count
+
+        await db.creators.update_one({"user_id": current_user["id"]}, {"$set": updates})
+        return await db.creators.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Phyllo fetch profile failed: {e}")
+        raise HTTPException(502, "Failed to fetch profile from Phyllo")
+
+
+# ---------- Instagram (RapidAPI scraper) ----------
+RAPIDAPI_KEY  = os.environ.get("RAPIDAPI_KEY", "")
+RAPIDAPI_HOST = os.environ.get("RAPIDAPI_HOST", "instagram-scraper-stable-api.p.rapidapi.com")
+
+
+class InstagramFetchRequest(BaseModel):
+    username: str
+
+
+class InstagramConfirmRequest(BaseModel):
+    username: str
+
+
+def _rapidapi_call(username: str) -> dict:
+    """Shared helper — calls RapidAPI and returns the parsed user dict."""
+    r = http.get(
+        f"https://{RAPIDAPI_HOST}/ig_get_fb_profile_hover.php",
+        params={"username_or_url": username},
+        headers={
+            "x-rapidapi-key": RAPIDAPI_KEY,
+            "x-rapidapi-host": RAPIDAPI_HOST,
+        },
+        timeout=15,
+    )
+    logger.info(f"RapidAPI status {r.status_code} for @{username}")
+    if not r.ok:
+        logger.error(f"RapidAPI error body: {r.text[:500]}")
+        if r.status_code == 404:
+            raise HTTPException(404, "Instagram account not found")
+        if r.status_code == 429:
+            raise HTTPException(429, "Rate limit reached — try again in a moment")
+        raise HTTPException(502, f"Instagram API returned {r.status_code}")
+    data = r.json()
+    logger.info(f"RapidAPI response keys: {list(data.keys())}")
+    user = (
+        data.get("user_data")
+        or data.get("data", {}).get("user")
+        or data.get("user")
+    )
+    if not user:
+        logger.error(f"No user object in response: {str(data)[:300]}")
+        raise HTTPException(404, "Instagram account not found")
+    return user
+
+
+def _parse_rapidapi_user(user: dict, username: str) -> dict:
+    hd_info = user.get("hd_profile_pic_url_info") or {}
+    hd_pic = (hd_info.get("url", "") if isinstance(hd_info, dict) else "") or user.get("profile_pic_url", "")
+    return {
+        "username": user.get("username", username),
+        "full_name": user.get("full_name", ""),
+        "profile_pic": hd_pic,
+        "followers": user.get("follower_count", 0),
+        "following": user.get("following_count", 0),
+        "posts": user.get("media_count", 0),
+        "is_verified": user.get("is_verified", False),
+        "is_private": user.get("is_private", False),
+        "bio": user.get("biography", ""),
+    }
+
+
+@api_router.get("/instagram/pic")
+async def instagram_pic_proxy(url: str = Query(...)):
+    """Proxy Instagram CDN images — browsers can't load them directly due to CORS."""
+    if "cdninstagram.com" not in url and "fbcdn.net" not in url:
+        raise HTTPException(400, "Only Instagram CDN URLs are allowed")
+    try:
+        r = http.get(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "Referer": "https://www.instagram.com/",
+                "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+            },
+            timeout=10,
+            stream=True,
+        )
+        if not r.ok:
+            raise HTTPException(404, "Image not found")
+        content_type = r.headers.get("content-type", "image/jpeg")
+        return StreamingResponse(r.iter_content(chunk_size=8192), media_type=content_type)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Image proxy error: {e}")
+        raise HTTPException(502, "Failed to fetch image")
+
+
+@api_router.post("/instagram/lookup")
+async def instagram_lookup(payload: InstagramFetchRequest):
+    """Public endpoint — just look up an Instagram profile, no auth needed."""
+    username = payload.username.lstrip("@").strip()
+    if not username:
+        raise HTTPException(400, "Username is required")
+    if not RAPIDAPI_KEY:
+        raise HTTPException(503, "Instagram lookup not configured")
+    try:
+        user = _rapidapi_call(username)
+        return _parse_rapidapi_user(user, username)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"RapidAPI unexpected error: {e}", exc_info=True)
+        raise HTTPException(502, "Failed to reach Instagram — try again")
+
+
+def _rapidapi_media(endpoint: str, username: str, amount: int = 12) -> list:
+    """Fetch posts or reels for a username. Returns raw item list."""
+    try:
+        r = http.post(
+            f"https://{RAPIDAPI_HOST}/{endpoint}",
+            data={"username_or_url": username, "pagination_token": "", "amount": str(amount)},
+            headers={
+                "x-rapidapi-key": RAPIDAPI_KEY,
+                "x-rapidapi-host": RAPIDAPI_HOST,
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            timeout=15,
+        )
+        if not r.ok:
+            logger.warning(f"Media fetch {endpoint} returned {r.status_code} for @{username}")
+            return []
+        data = r.json()
+        items = (
+            data.get("data", {}).get("items")
+            or data.get("items")
+            or []
+        )
+        return items if isinstance(items, list) else []
+    except Exception as e:
+        logger.warning(f"Media fetch {endpoint} error for @{username}: {e}")
+        return []
+
+
+def _parse_media_item(item: dict, media_type: str) -> dict:
+    code = item.get("code") or item.get("shortcode") or ""
+    caption_raw = item.get("caption") or {}
+    caption = (caption_raw.get("text", "") if isinstance(caption_raw, dict) else str(caption_raw))[:200]
+    return {
+        "url": f"https://www.instagram.com/p/{code}/" if code else "",
+        "type": media_type,
+        "likes": item.get("like_count", 0) or 0,
+        "comments": item.get("comment_count", 0) or 0,
+        "caption": caption,
+        "timestamp": item.get("taken_at", 0),
+    }
+
+
+@api_router.get("/instagram/debug-media")
+async def debug_instagram_media(username: str):
+    """Dev-only: returns raw RapidAPI response for posts + reels so we can inspect the schema."""
+    posts_raw_full = []
+    reels_raw_full = []
+    try:
+        r = http.post(
+            f"https://{RAPIDAPI_HOST}/get_ig_user_posts.php",
+            data={"username_or_url": username, "pagination_token": "", "amount": "3"},
+            headers={"x-rapidapi-key": RAPIDAPI_KEY, "x-rapidapi-host": RAPIDAPI_HOST,
+                     "Content-Type": "application/x-www-form-urlencoded"},
+            timeout=15,
+        )
+        posts_raw_full = r.json()
+    except Exception as e:
+        posts_raw_full = {"error": str(e)}
+    try:
+        r = http.post(
+            f"https://{RAPIDAPI_HOST}/get_ig_user_reels.php",
+            data={"username_or_url": username, "pagination_token": "", "amount": "3"},
+            headers={"x-rapidapi-key": RAPIDAPI_KEY, "x-rapidapi-host": RAPIDAPI_HOST,
+                     "Content-Type": "application/x-www-form-urlencoded"},
+            timeout=15,
+        )
+        reels_raw_full = r.json()
+    except Exception as e:
+        reels_raw_full = {"error": str(e)}
+    return {"posts": posts_raw_full, "reels": reels_raw_full}
+
+
+@api_router.post("/instagram/connect")
+async def instagram_connect(
+    payload: InstagramConfirmRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Creator confirms the looked-up profile is theirs; fetches profile + recent media and saves it."""
+    if current_user.get("role") != "creator":
+        raise HTTPException(403, "Only creators can connect Instagram")
+
+    username = payload.username.lstrip("@").strip()
+    if not username:
+        raise HTTPException(400, "Username is required")
+
+    if not RAPIDAPI_KEY:
+        raise HTTPException(503, "Instagram lookup not configured")
+
+    try:
+        user = _rapidapi_call(username)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"RapidAPI connect error: {e}", exc_info=True)
+        raise HTTPException(502, "Failed to reach Instagram — try again")
+
+    parsed = _parse_rapidapi_user(user, username)
+    followers = parsed["followers"]
+    handle = parsed["username"]
+    cdn_url = parsed["profile_pic"]
+
+    # Fetch recent posts + reels for portfolio and avg stats
+    posts_raw = _rapidapi_media("get_ig_user_posts.php", handle, 6)
+    reels_raw = _rapidapi_media("get_ig_user_reels.php", handle, 6)
+
+    portfolio = (
+        [_parse_media_item(p, "post") for p in posts_raw if p.get("code") or p.get("shortcode")]
+        + [_parse_media_item(r, "reel") for r in reels_raw if r.get("code") or r.get("shortcode")]
+    )
+
+    # Derive avg_likes, avg_comments, engagement from real post data
+    all_likes = [p["likes"] for p in portfolio if p["likes"]]
+    all_comments = [p["comments"] for p in portfolio if p["comments"]]
+    avg_likes = int(sum(all_likes) / len(all_likes)) if all_likes else 0
+    avg_comments = int(sum(all_comments) / len(all_comments)) if all_comments else 0
+    engagement = round((avg_likes / followers) * 100, 2) if followers > 0 and avg_likes else 0.0
+
+    updates = {
+        "instagram_handle": f"@{handle}",
+        "instagram_full_name": user.get("full_name", ""),
+        "instagram_pic": cdn_url,
+        "instagram_verified": True,
+        "instagram_is_private": user.get("is_private", False),
+        "instagram_is_platform_verified": user.get("is_verified", False),
+        "followers": followers,
+        "following": user.get("following_count", 0),
+        "media_count": user.get("media_count", 0),
+        "instagram_bio": user.get("biography", ""),
+    }
+    if portfolio:
+        updates["portfolio"] = portfolio
+    if avg_likes:
+        updates["avg_likes"] = avg_likes
+    if avg_comments:
+        updates["avg_comments"] = avg_comments
+    if engagement:
+        updates["engagement_rate"] = engagement
+
+    await db.creators.update_one({"user_id": current_user["id"]}, {"$set": updates})
+    updated = await db.creators.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    logger.info(
+        f"Instagram connected for {current_user['id']}: @{handle} "
+        f"({followers} followers, {len(portfolio)} media items)"
+    )
+    return updated
+
+
+# ---------- Avatar upload ----------
+class AvatarUpload(BaseModel):
+    avatar: str  # base64 data URL: "data:image/jpeg;base64,..."
+
+
+@api_router.post("/creators/avatar")
+async def upload_avatar(payload: AvatarUpload, current_user: dict = Depends(get_current_user)):
+    if current_user.get("role") != "creator":
+        raise HTTPException(403, "Only creators can upload an avatar")
+    data = payload.avatar
+    if not data.startswith("data:image/"):
+        raise HTTPException(400, "Invalid image format")
+    # Rough size check: base64 of 1MB image ≈ 1.37MB string
+    if len(data) > 1_500_000:
+        raise HTTPException(400, "Image too large — keep it under 1 MB")
+    await db.creators.update_one({"user_id": current_user["id"]}, {"$set": {"avatar": data}})
+    return {"ok": True}
+
+
+# ---------- Careers ----------
+class CareersApplication(BaseModel):
+    position: str
+    name: str
+    email: str
+    phone: Optional[str] = None
+    why: str
+    links: Optional[str] = None
+
+
+@api_router.post("/careers/apply")
+async def careers_apply(payload: CareersApplication):
+    if not RESEND_API_KEY:
+        logger.info(f"[Careers] No RESEND_API_KEY — application from {payload.email}")
+        return {"ok": True}
+    try:
+        import resend as _resend
+        _resend.api_key = RESEND_API_KEY
+        links_html = f"<p><strong>Links:</strong> {payload.links}</p>" if payload.links else ""
+        phone_html = f"<p><strong>Phone:</strong> {payload.phone}</p>" if payload.phone else ""
+        _resend.Emails.send({
+            "from": RESEND_FROM,
+            "to": ["social@noctra.co.in"],
+            "reply_to": payload.email,
+            "subject": f"[Careers] {payload.position} — {payload.name}",
+            "html": f"""
+<div style="font-family:monospace;max-width:600px;margin:0 auto;padding:40px 24px;background:#efe8d8;color:#0a0a0a">
+  <div style="font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:#e63946;margin-bottom:16px">§ Noctra Careers</div>
+  <h1 style="font-size:28px;font-weight:900;margin:0 0 24px">New application: {payload.position}</h1>
+  <div style="border:1px solid #0a0a0a;padding:20px;margin-bottom:20px">
+    <p style="margin:0 0 8px"><strong>Name:</strong> {payload.name}</p>
+    <p style="margin:0 0 8px"><strong>Email:</strong> <a href="mailto:{payload.email}" style="color:#e63946">{payload.email}</a></p>
+    {phone_html}
+    {links_html}
+  </div>
+  <div style="border:1px solid #0a0a0a;padding:20px">
+    <p style="margin:0 0 8px;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#7a7466">Why Noctra?</p>
+    <p style="margin:0;white-space:pre-wrap">{payload.why}</p>
+  </div>
+</div>""",
+        })
+        logger.info(f"Careers application from {payload.email} sent to social@noctra.co.in")
+        return {"ok": True}
+    except Exception as e:
+        logger.error(f"Careers email failed: {e}")
+        raise HTTPException(502, "Failed to send application — please email social@noctra.co.in directly")
 
 
 # ---------- App wiring ----------

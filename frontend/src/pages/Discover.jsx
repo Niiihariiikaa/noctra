@@ -67,7 +67,7 @@ export default function Discover() {
       <Navbar />
 
       <section className="max-w-7xl mx-auto px-5 md:px-10 pt-8 md:pt-12 pb-10">
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ Discover — 3,200+ creators</div>
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ Discover creators</div>
         <h1 className="display text-5xl md:text-7xl lg:text-8xl font-black leading-[0.9] mb-6">
           Find your<br/><span className="italic text-[#e63946]">people</span>.
         </h1>

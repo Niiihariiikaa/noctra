@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Instagram, Twitter, Youtube } from "lucide-react";
+import { Instagram } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -23,33 +23,46 @@ export default function Footer() {
             <h3 className="display text-4xl md:text-6xl leading-[0.95] mb-4">
               Let's make<br/>something<br/><span className="text-[#e63946] italic">weird & good.</span>
             </h3>
-            <p className="text-[#efe8d8]/60 max-w-sm text-sm">
+            <p className="text-[#efe8d8]/60 max-w-sm text-sm mb-2">
               A marketplace where brands meet creators. Based in India. Open to earth.
             </p>
+            <a href="mailto:social@noctra.co.in" className="mono text-[9px] uppercase tracking-widest text-[#e63946] hover:opacity-70 transition">
+              social@noctra.co.in
+            </a>
             <div className="flex gap-2 mt-6">
-              {[Instagram, Twitter, Youtube].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="w-10 h-10 rounded-full border border-[#efe8d8]/30 flex items-center justify-center hover:bg-[#e63946] hover:border-[#e63946] transition"
-                  aria-label="social"
-                >
-                  <Icon size={14} />
-                </a>
-              ))}
+              <a
+                href="https://instagram.com/noctra.co.in"
+                target="_blank"
+                rel="noreferrer"
+                className="w-10 h-10 rounded-full border border-[#efe8d8]/30 flex items-center justify-center hover:bg-[#e63946] hover:border-[#e63946] transition"
+                aria-label="Instagram"
+              >
+                <Instagram size={14} />
+              </a>
             </div>
           </div>
 
-          <FooterCol title="Explore" links={[["Discover", "/discover"], ["Services", "/services"], ["For Brands", "/auth?role=brand"], ["For Creators", "/auth?role=creator"]]} />
-          <FooterCol title="Inside" links={[["About", "#"], ["Manifesto", "#"], ["Careers", "#"], ["Contact", "mailto:hello@noctra.in"]]} />
+          <FooterCol title="Explore" links={[
+            ["Discover", "/discover"],
+            ["Services", "/services"],
+            ["For Brands", "/auth?role=brand"],
+            ["For Creators", "/auth?role=creator"],
+          ]} />
+
+          <FooterCol title="Company" links={[
+            ["About Us", "/about"],
+            ["Careers", "/careers"],
+            ["Contact", "/contact"],
+            ["Privacy Policy", "/privacy"],
+            ["Terms of Use", "/terms"],
+          ]} />
         </div>
 
         <div className="mt-16 pt-6 border-t border-[#efe8d8]/10 flex flex-col md:flex-row justify-between gap-2 mono text-[10px] uppercase tracking-[0.25em]">
           <span>© 2026 Noctra · Built in India</span>
           <div className="flex gap-5">
-            <a href="#">Privacy</a>
-            <a href="#">Terms</a>
-            <a href="#">Cookies</a>
+            <Link to="/privacy" className="hover:text-[#e63946] transition">Privacy</Link>
+            <Link to="/terms" className="hover:text-[#e63946] transition">Terms</Link>
           </div>
         </div>
       </div>

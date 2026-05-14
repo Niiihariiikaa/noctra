@@ -14,7 +14,7 @@ export default function BottomNav() {
     {
       to: user ? (user.role === "brand" ? "/dashboard/brand" : "/dashboard/creator") : "/auth",
       icon: LayoutDashboard,
-      label: "Studio",
+      label: "Dashboard",
     },
     { to: user ? "#" : "/auth", icon: User, label: user ? user.name.split(" ")[0] : "Sign in" },
   ];

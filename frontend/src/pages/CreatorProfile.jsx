@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowUpRight, MapPin, Star, Instagram, Calendar, Loader2 } from "lucide-react";
+import { ArrowUpRight, MapPin, Star, Instagram, Heart, MessageCircle, Play, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import BottomNav from "../components/layout/BottomNav";
 import TrustRing from "../components/common/TrustRing";
-import { getCreator, getBrands, createDeal, createOrder, verifyPayment, razorpayConfig } from "../lib/api";
+import { getCreator, getBrands, createDeal } from "../lib/api";
+import { getAvatar } from "../lib/avatar";
 import { getUser } from "../lib/auth";
 import { formatINR, formatFollowers, trustBadge } from "../lib/format";
 
@@ -46,17 +47,18 @@ export default function CreatorProfile() {
       navigate("/auth?role=brand");
       return;
     }
-    const brand = brands.find((b) => b.id === (selectedBrand || user.brandId)) || brands[0];
-    if (!brand) {
-      toast.error("Pick a brand");
+    // Only show the brand that belongs to this user
+    const myBrand = brands.find((b) => b.user_id === user.id) || brands.find((b) => b.id === selectedBrand);
+    if (!myBrand) {
+      toast.error("No brand profile found — make sure you registered as a brand.");
       return;
     }
     setSubmitting(true);
     try {
-      const deal = await createDeal({
-        brand_id: brand.id,
-        brand_name: brand.name,
-        brand_logo_color: brand.logo_color,
+      await createDeal({
+        brand_id: user.id,
+        brand_name: myBrand.name,
+        brand_logo_color: myBrand.logo_color || "#00d4c8",
         creator_id: creator.id,
         creator_name: creator.name,
         creator_avatar: creator.avatar,
@@ -64,45 +66,11 @@ export default function CreatorProfile() {
         amount: price,
         status: "Requested",
       });
-
-      // Razorpay flow
-      const cfg = await razorpayConfig().catch(() => ({ enabled: false }));
-      const order = await createOrder({ amount: price * 100, deal_id: deal.id, currency: "INR" });
-
-      if (!cfg.enabled || order.mode === "mock") {
-        // Mock confirm
-        await verifyPayment({
-          razorpay_order_id: order.order_id,
-          razorpay_payment_id: `pay_mock_${Date.now()}`,
-          razorpay_signature: "mock",
-          deal_id: deal.id,
-        });
-        toast.success("Deal confirmed (mock payment)");
-        setOpen(false);
-        navigate("/dashboard/brand");
-        return;
-      }
-
-      // Real Razorpay
-      const rzp = new window.Razorpay({
-        key: order.key_id,
-        amount: order.amount,
-        currency: order.currency,
-        name: "Noctra",
-        description: `${DELIVERABLES.find((d) => d.key === deliverable).label} with ${creator.name}`,
-        order_id: order.order_id,
-        prefill: { email: user.email, name: user.name },
-        theme: { color: "#e63946" },
-        handler: async (resp) => {
-          await verifyPayment({ ...resp, deal_id: deal.id });
-          toast.success("Payment successful · Deal confirmed");
-          setOpen(false);
-          navigate("/dashboard/brand");
-        },
-      });
-      rzp.open();
+      toast.success("Request sent! The creator will review it.");
+      setOpen(false);
+      navigate("/dashboard/brand");
     } catch (e) {
-      toast.error(e?.response?.data?.detail || "Failed to book");
+      toast.error(e?.response?.data?.detail || "Failed to send request");
     } finally {
       setSubmitting(false);
     }
@@ -154,7 +122,11 @@ export default function CreatorProfile() {
         {/* Main */}
         <div>
           <div className="flex items-center gap-3 flex-wrap mb-6">
-            <img src={creator.avatar} alt="" className="w-16 h-16 rounded-full object-cover border border-[#0a0a0a]" />
+            <img
+              src={getAvatar(creator)}
+              alt=""
+              className="w-16 h-16 rounded-full object-cover border border-[#0a0a0a] bg-[#e8e0cd]"
+            />
             <div className="flex-1">
               <a href={`https://instagram.com/${creator.instagram_handle?.replace("@", "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 mono text-xs hover:text-[#e63946]">
                 <Instagram size={12} /> {creator.instagram_handle}
@@ -165,37 +137,66 @@ export default function CreatorProfile() {
           </div>
 
           {/* Stats grid */}
-          <div className="grid grid-cols-3 border-t border-l border-[#0a0a0a]">
+          <div className="grid grid-cols-2 md:grid-cols-4 border-t border-l border-[#0a0a0a]">
             <Stat label="Followers" value={formatFollowers(creator.followers)} />
             <Stat label="Engagement" value={`${creator.engagement_rate}%`} />
             <Stat label="Avg Likes" value={formatFollowers(creator.avg_likes)} />
+            <Stat label="Avg Comments" value={formatFollowers(creator.avg_comments || 0)} />
           </div>
 
           {/* Portfolio */}
-          <div className="mt-10">
-            <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-4">Portfolio</div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {creator.portfolio?.map((p, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 10 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.04 }}
-                  className="border border-[#0a0a0a] overflow-hidden group"
-                  data-testid={`portfolio-${i}`}
-                >
-                  <div className="aspect-square overflow-hidden">
-                    <img src={p.thumb} alt="" className="w-full h-full object-cover group-hover:scale-105 transition" />
-                  </div>
-                  <div className="px-3 py-2 border-t border-[#0a0a0a] text-xs flex justify-between">
-                    <span className="font-medium truncate">{p.campaign}</span>
-                    <span className="text-[#7a7466] truncate ml-2">{p.brand}</span>
-                  </div>
-                </motion.div>
-              ))}
+          {creator.portfolio?.length > 0 && (
+            <div className="mt-10">
+              <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-4">
+                {creator.instagram_verified ? "Recent Content" : "Portfolio"}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {creator.portfolio.map((p, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.04 }}
+                    data-testid={`portfolio-${i}`}
+                  >
+                    {p.type ? (
+                      /* Instagram-synced item — stats card */
+                      <a
+                        href={p.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block border border-[#0a0a0a] group hover:shadow-[4px_4px_0_0_#0a0a0a] transition-shadow"
+                      >
+                        <div className={`aspect-square flex flex-col items-center justify-center gap-3 ${p.type === "reel" ? "bg-[#0a0a0a]" : "bg-[#e8e0cd]"}`}>
+                          {p.type === "reel" && <Play size={28} className="text-[#efe8d8] opacity-60" />}
+                          <div className={`flex items-center gap-4 mono text-xs font-bold ${p.type === "reel" ? "text-[#efe8d8]" : "text-[#0a0a0a]"}`}>
+                            <span className="flex items-center gap-1"><Heart size={12} /> {p.likes?.toLocaleString()}</span>
+                            <span className="flex items-center gap-1"><MessageCircle size={12} /> {p.comments?.toLocaleString()}</span>
+                          </div>
+                        </div>
+                        <div className="px-3 py-2 border-t border-[#0a0a0a] text-xs flex items-center justify-between gap-2">
+                          <span className="mono text-[9px] uppercase tracking-widest text-[#7a7466]">{p.type}</span>
+                          <span className="text-[#0a0a0a]/60 truncate text-right">{p.caption?.slice(0, 40) || "View post"}</span>
+                        </div>
+                      </a>
+                    ) : (
+                      /* Manually added item — image card */
+                      <div className="border border-[#0a0a0a] overflow-hidden group">
+                        <div className="aspect-square overflow-hidden">
+                          <img src={p.thumb} alt="" className="w-full h-full object-cover group-hover:scale-105 transition" />
+                        </div>
+                        <div className="px-3 py-2 border-t border-[#0a0a0a] text-xs flex justify-between">
+                          <span className="font-medium truncate">{p.campaign}</span>
+                          <span className="text-[#7a7466] truncate ml-2">{p.brand}</span>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Reviews */}
           <div className="mt-12">
@@ -242,7 +243,7 @@ export default function CreatorProfile() {
             >
               Book a deal <ArrowUpRight size={14} />
             </button>
-            <p className="mono text-[9px] uppercase tracking-widest text-[#7a7466] text-center">Escrow-backed · Razorpay</p>
+            <p className="mono text-[9px] uppercase tracking-widest text-[#7a7466] text-center">Deals tracked end-to-end on Noctra</p>
           </div>
         </aside>
       </section>
@@ -260,12 +261,12 @@ export default function CreatorProfile() {
             <h3 className="display text-3xl font-black mb-5">{DELIVERABLES.find((d) => d.key === deliverable).label} with {creator.name}</h3>
             <label className="mono text-[10px] uppercase tracking-[0.3em] block mb-2">From brand</label>
             <select
-              value={selectedBrand || user?.brandId || (brands[0]?.id || "")}
+              value={selectedBrand || brands.find((b) => b.user_id === user?.id)?.id || ""}
               onChange={(e) => setSelectedBrand(e.target.value)}
               className="w-full border border-[#0a0a0a] bg-[#efe8d8] px-3 py-3 mb-5 text-sm"
               data-testid="brand-select"
             >
-              {brands.map((b) => <option key={b.id} value={b.id}>{b.name} — {b.industry}</option>)}
+              {brands.filter((b) => b.user_id === user?.id).map((b) => <option key={b.id} value={b.id}>{b.name}{b.industry ? ` — ${b.industry}` : ""}</option>)}
             </select>
 
             <div className="flex items-center justify-between border-t border-[#0a0a0a] pt-4 mb-5">
@@ -283,7 +284,7 @@ export default function CreatorProfile() {
                 data-testid="confirm-book"
               >
                 {submitting && <Loader2 size={12} className="animate-spin" />}
-                Confirm & pay
+                Send Request
               </button>
             </div>
           </motion.div>
