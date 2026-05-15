@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { motion } from "framer-motion";
 
 export default function EmptyState({ title = "Nothing here yet", subtitle = "Try adjusting your filters.", action }) {
@@ -13,7 +13,7 @@ export default function EmptyState({ title = "Nothing here yet", subtitle = "Try
       <h3 className="display text-4xl md:text-6xl font-black leading-[0.9] mb-3">
         {title}<span className="italic text-[#e63946]">.</span>
       </h3>
-      <p className="text-[#7a7466] text-sm max-w-sm">{subtitle}</p>
+      <p className="text-[#5c5650] text-sm max-w-sm">{subtitle}</p>
       {action}
     </motion.div>
   );

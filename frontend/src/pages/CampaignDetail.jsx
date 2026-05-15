@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Calendar, Loader2, Users, CheckCircle2 } from "lucide-react";
@@ -93,7 +93,7 @@ export default function CampaignDetail() {
     <div className="min-h-screen bg-[#efe8d8] text-[#0a0a0a]">
       <Navbar />
       <section className="max-w-4xl mx-auto px-5 md:px-10 py-10 pb-32">
-        <Link to={isBrand ? "/dashboard/brand" : "/campaigns"} className="inline-flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-[#7a7466] hover:text-[#0a0a0a] mb-8">
+        <Link to={isBrand ? "/dashboard/brand" : "/campaigns"} className="inline-flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-[#5c5650] hover:text-[#0a0a0a] mb-8">
           <ArrowLeft size={12} /> Back
         </Link>
 
@@ -104,19 +104,19 @@ export default function CampaignDetail() {
           </div>
           <div className="text-right">
             <div className="display text-3xl font-black text-[#e63946]">{formatINR(campaign.budget_min)}–{formatINR(campaign.budget_max)}</div>
-            <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466] mt-1">{campaign.target_niche} · {campaign.deliverables}</div>
+            <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650] mt-1">{campaign.target_niche} · {campaign.deliverables}</div>
           </div>
         </div>
 
         {/* Stats row */}
         <div className="flex gap-4 flex-wrap mb-8 text-sm">
-          <div className="flex items-center gap-1.5 mono text-[10px] uppercase tracking-widest text-[#7a7466]">
+          <div className="flex items-center gap-1.5 mono text-[10px] uppercase tracking-widest text-[#5c5650]">
             <Calendar size={12} /> Apply by {new Date(campaign.application_deadline).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
           </div>
-          <div className="flex items-center gap-1.5 mono text-[10px] uppercase tracking-widest text-[#7a7466]">
+          <div className="flex items-center gap-1.5 mono text-[10px] uppercase tracking-widest text-[#5c5650]">
             <CheckCircle2 size={12} /> Content due {new Date(campaign.content_deadline).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
           </div>
-          <div className="flex items-center gap-1.5 mono text-[10px] uppercase tracking-widest text-[#7a7466]">
+          <div className="flex items-center gap-1.5 mono text-[10px] uppercase tracking-widest text-[#5c5650]">
             <Users size={12} /> {campaign.applicant_count || 0} applicants
           </div>
         </div>
@@ -155,7 +155,7 @@ export default function CampaignDetail() {
             {isBrand && (
               <Section title={`Applicants (${applications.length})`}>
                 {applications.length === 0 ? (
-                  <p className="text-sm text-[#7a7466]">No applications yet.</p>
+                  <p className="text-sm text-[#5c5650]">No applications yet.</p>
                 ) : (
                   <div className="space-y-3">
                     {applications.map((a) => (
@@ -163,7 +163,7 @@ export default function CampaignDetail() {
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <div className="font-bold text-sm">{a.creator_name}</div>
-                            <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466]">{a.creator_instagram} · {a.creator_niche}</div>
+                            <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650]">{a.creator_instagram} · {a.creator_niche}</div>
                             <p className="text-sm text-[#0a0a0a]/80 mt-2">{a.pitch_note}</p>
                           </div>
                           {a.status === "pending" ? (
@@ -184,7 +184,7 @@ export default function CampaignDetail() {
                               </button>
                             </div>
                           ) : (
-                            <span className={`mono text-[9px] uppercase tracking-widest px-2 py-1 ${a.status === "accepted" ? "bg-[#0a0a0a] text-[#efe8d8]" : "bg-[#7a7466]/20 text-[#7a7466]"}`}>
+                            <span className={`mono text-[9px] uppercase tracking-widest px-2 py-1 ${a.status === "accepted" ? "bg-[#0a0a0a] text-[#efe8d8]" : "bg-[#7a7466]/20 text-[#5c5650]"}`}>
                               {a.status}
                             </span>
                           )}
@@ -204,10 +204,10 @@ export default function CampaignDetail() {
                 {myApplication ? (
                   <div>
                     <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-2">Your application</div>
-                    <div className={`mono text-[10px] uppercase tracking-widest px-3 py-2 text-center ${myApplication.status === "accepted" ? "bg-[#0a0a0a] text-[#efe8d8]" : myApplication.status === "declined" ? "bg-[#e63946]/10 text-[#e63946]" : "bg-[#7a7466]/10 text-[#7a7466]"}`}>
+                    <div className={`mono text-[10px] uppercase tracking-widest px-3 py-2 text-center ${myApplication.status === "accepted" ? "bg-[#0a0a0a] text-[#efe8d8]" : myApplication.status === "declined" ? "bg-[#e63946]/10 text-[#e63946]" : "bg-[#7a7466]/10 text-[#5c5650]"}`}>
                       {myApplication.status === "pending" ? "Under review" : myApplication.status}
                     </div>
-                    <p className="text-xs text-[#7a7466] mt-3">"{myApplication.pitch_note}"</p>
+                    <p className="text-xs text-[#5c5650] mt-3">"{myApplication.pitch_note}"</p>
                   </div>
                 ) : (
                   <div>
@@ -233,7 +233,7 @@ export default function CampaignDetail() {
 
             {!user && (
               <div className="border border-[#0a0a0a] p-5 text-center">
-                <p className="text-sm text-[#7a7466] mb-3">Sign in as a creator to apply.</p>
+                <p className="text-sm text-[#5c5650] mb-3">Sign in as a creator to apply.</p>
                 <Link to="/auth?role=creator" className="block w-full px-4 py-3 bg-[#0a0a0a] text-[#efe8d8] mono text-[10px] uppercase tracking-widest hover:bg-[#e63946] transition text-center">
                   Join as Creator →
                 </Link>

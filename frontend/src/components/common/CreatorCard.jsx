@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Bookmark, MapPin, ArrowUpRight } from "lucide-react";
@@ -62,7 +62,7 @@ export default function CreatorCard({ creator, onBookmark, index = 0 }) {
           </h3>
         </div>
 
-        <div className="flex items-center gap-2 mt-1 mono text-[10px] uppercase tracking-[0.2em] text-[#7a7466]">
+        <div className="flex items-center gap-2 mt-1 mono text-[10px] uppercase tracking-[0.2em] text-[#5c5650]">
           <MapPin size={10} /> {creator.city}
           <span>·</span>
           <span>{formatFollowers(creator.followers)}</span>
@@ -70,11 +70,11 @@ export default function CreatorCard({ creator, onBookmark, index = 0 }) {
           <span>{creator.engagement_rate}%</span>
         </div>
 
-        <p className="text-sm text-[#0a0a0a]/70 mt-2 line-clamp-2 min-h-[2.5rem]">{creator.bio}</p>
+        <p className="text-sm text-[#0a0a0a]/85 mt-2 line-clamp-2 min-h-[2.5rem]">{creator.bio}</p>
 
-        <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#0a0a0a]/15">
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#0a0a0a]/25">
           <div>
-            <div className="mono text-[9px] uppercase tracking-[0.25em] text-[#7a7466]">Reel from</div>
+            <div className="mono text-[9px] uppercase tracking-[0.25em] text-[#5c5650]">Reel from</div>
             <div className="display text-xl font-black text-[#e63946]">{formatINR(creator.pricing?.reel || 0)}</div>
           </div>
           <Link

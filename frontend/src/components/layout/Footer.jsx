@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Link } from "react-router-dom";
 import { Instagram } from "lucide-react";
 
@@ -21,9 +21,9 @@ export default function Footer() {
           <div className="md:col-span-2">
             <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">Collaborative Hub · EST. 2026</div>
             <h3 className="display text-4xl md:text-6xl leading-[0.95] mb-4">
-              Let's make<br/>something<br/><span className="text-[#e63946] italic">weird & good.</span>
+              Let's build<br/>something<br/><span className="text-[#e63946] italic">stupid good</span>.
             </h3>
-            <p className="text-[#efe8d8]/60 max-w-sm text-sm mb-2">
+            <p className="text-[#efe8d8]/85 max-w-sm text-sm mb-2">
               A marketplace where brands meet creators. Based in India. Open to earth.
             </p>
             <a href="mailto:social@noctra.co.in" className="mono text-[9px] uppercase tracking-widest text-[#e63946] hover:opacity-70 transition">
@@ -77,7 +77,7 @@ function FooterCol({ title, links }) {
       <ul className="space-y-2.5">
         {links.map(([label, href]) => (
           <li key={label}>
-            <Link to={href} className="text-[#efe8d8]/80 hover:text-[#e63946] transition text-sm">{label}</Link>
+            <Link to={href} className="text-[#efe8d8]/90 hover:text-[#e63946] transition text-sm">{label}</Link>
           </li>
         ))}
       </ul>

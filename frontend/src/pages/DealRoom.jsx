@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, ExternalLink } from "lucide-react";
@@ -77,13 +77,13 @@ export default function DealRoom() {
     <div className="min-h-screen bg-[#efe8d8] text-[#0a0a0a]">
       <Navbar />
       <section className="max-w-4xl mx-auto px-5 md:px-10 py-10 pb-32">
-        <Link to={isBrand ? "/dashboard/brand" : "/dashboard/creator"} className="inline-flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-[#7a7466] hover:text-[#0a0a0a] mb-8">
+        <Link to={isBrand ? "/dashboard/brand" : "/dashboard/creator"} className="inline-flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-[#5c5650] hover:text-[#0a0a0a] mb-8">
           <ArrowLeft size={12} /> Back to dashboard
         </Link>
 
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ Deal Room</div>
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">Deal Room</div>
         <h1 className="display text-4xl md:text-6xl font-black leading-[0.9] mb-2">{room.campaign_name}</h1>
-        <div className="mono text-[10px] uppercase tracking-widest text-[#7a7466] mb-8">
+        <div className="mono text-[10px] uppercase tracking-widest text-[#5c5650] mb-8">
           {room.brand_name} × {room.creator_name}
         </div>
 
@@ -92,7 +92,7 @@ export default function DealRoom() {
           <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-4">Status</div>
           <div className="flex gap-0 overflow-x-auto">
             {STATUS_STEPS.map((s, i) => (
-              <div key={s} className={`flex-1 min-w-[80px] px-2 py-2 text-center mono text-[9px] uppercase tracking-widest border-r border-[#0a0a0a] last:border-r-0 transition ${i <= stepIndex ? "bg-[#0a0a0a] text-[#efe8d8]" : "text-[#7a7466]"}`}>
+              <div key={s} className={`flex-1 min-w-[80px] px-2 py-2 text-center mono text-[9px] uppercase tracking-widest border-r border-[#0a0a0a] last:border-r-0 transition ${i <= stepIndex ? "bg-[#0a0a0a] text-[#efe8d8]" : "text-[#5c5650]"}`}>
                 {s}
               </div>
             ))}
@@ -115,7 +115,7 @@ export default function DealRoom() {
             {room.concepts?.length > 0 && (
               <Card title="Content concepts">
                 {room.concepts.map((c, i) => (
-                  <div key={i} className="border border-[#0a0a0a]/20 p-3 mb-3 last:mb-0">
+                  <div key={i} className="border border-[#0a0a0a]/30 p-3 mb-3 last:mb-0">
                     <div className="mono text-[9px] uppercase tracking-widest text-[#e63946] mb-1">Concept {i + 1}{c.title ? ` — ${c.title}` : ""}</div>
                     {c.description && <p className="text-sm text-[#0a0a0a]/80">{c.description}</p>}
                     {c.reference && <a href={c.reference} target="_blank" rel="noreferrer" className="mono text-[9px] uppercase tracking-widest text-[#e63946] underline mt-1 inline-flex items-center gap-1"><ExternalLink size={9} />Reference</a>}
@@ -129,7 +129,7 @@ export default function DealRoom() {
               <Card title={`Revision history (${room.revision_count}/2)`}>
                 {room.revisions.map((r, i) => (
                   <div key={i} className="border-l-2 border-[#e63946] pl-3 mb-3 last:mb-0">
-                    <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466] mb-1">Revision {i + 1} · {new Date(r.at).toLocaleDateString()}</div>
+                    <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650] mb-1">Revision {i + 1} · {new Date(r.at).toLocaleDateString()}</div>
                     <p className="text-sm">{r.note}</p>
                   </div>
                 ))}
@@ -179,7 +179,7 @@ export default function DealRoom() {
 
                 {(room.status === "Matched" || room.status === "Under Review") && (
                   <>
-                    <label className="mono text-[10px] uppercase tracking-[0.3em] text-[#0a0a0a]/70 block mb-1">Google Drive / Frame.io link</label>
+                    <label className="mono text-[10px] uppercase tracking-[0.3em] text-[#0a0a0a]/85 block mb-1">Google Drive / Frame.io link</label>
                     <input
                       value={contentLink}
                       onChange={(e) => setContentLink(e.target.value)}
@@ -194,7 +194,7 @@ export default function DealRoom() {
 
                 {room.status === "Approved" && (
                   <>
-                    <p className="text-xs text-[#7a7466]">Content approved! Post it on Instagram, then paste the live URL below.</p>
+                    <p className="text-xs text-[#5c5650]">Content approved! Post it on Instagram, then paste the live URL below.</p>
                     <input
                       value={postUrl}
                       onChange={(e) => setPostUrl(e.target.value)}
@@ -226,7 +226,7 @@ export default function DealRoom() {
                       {acting ? "…" : "Approve content →"}
                     </button>
                     <div>
-                      <label className="mono text-[10px] uppercase tracking-[0.3em] text-[#0a0a0a]/70 block mb-1">
+                      <label className="mono text-[10px] uppercase tracking-[0.3em] text-[#0a0a0a]/85 block mb-1">
                         Request revision ({room.revision_count || 0}/2 used)
                       </label>
                       <textarea
@@ -250,7 +250,7 @@ export default function DealRoom() {
                 )}
 
                 {room.status !== "Content Submitted" && room.status !== "Posted" && (
-                  <p className="text-xs text-[#7a7466]">
+                  <p className="text-xs text-[#5c5650]">
                     {room.status === "Matched" && "Waiting for creator to submit content."}
                     {room.status === "Under Review" && "Creator is revising content."}
                     {room.status === "Approved" && "Waiting for creator to post content."}
@@ -282,7 +282,7 @@ function Card({ title, children }) {
 function Row({ label, value }) {
   return (
     <div className="flex gap-3 mb-3 last:mb-0 text-sm">
-      <span className="mono text-[9px] uppercase tracking-widest text-[#7a7466] w-28 shrink-0 pt-0.5">{label}</span>
+      <span className="mono text-[9px] uppercase tracking-widest text-[#5c5650] w-28 shrink-0 pt-0.5">{label}</span>
       <span className="text-[#0a0a0a]/90">{value}</span>
     </div>
   );

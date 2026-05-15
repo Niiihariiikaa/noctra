@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -40,7 +40,7 @@ export default function BrandOnboarding() {
     <div className="min-h-screen bg-[#efe8d8] text-[#0a0a0a]">
       <Navbar />
       <section className="max-w-2xl mx-auto px-5 py-12">
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ Brand Onboarding</div>
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">Brand Onboarding</div>
         <h1 className="display text-5xl md:text-7xl font-black leading-[0.9] mb-10">
           Tell us about<br /><span className="italic text-[#e63946]">your brand.</span>
         </h1>
@@ -88,7 +88,7 @@ export default function BrandOnboarding() {
 
           <Field label="WhatsApp number (creators will use this to reach you)">
             <div className="flex border border-[#0a0a0a] focus-within:bg-[#e8e0cd]">
-              <span className="px-3 py-3 text-sm text-[#7a7466] border-r border-[#0a0a0a] select-none">+91</span>
+              <span className="px-3 py-3 text-sm text-[#5c5650] border-r border-[#0a0a0a] select-none">+91</span>
               <input
                 type="tel"
                 value={whatsapp}
@@ -99,7 +99,7 @@ export default function BrandOnboarding() {
             </div>
           </Field>
 
-          <div className="pt-2 border-t border-[#0a0a0a]/20">
+          <div className="pt-2 border-t border-[#0a0a0a]/30">
             <button
               type="submit"
               disabled={submitting}
@@ -117,7 +117,7 @@ export default function BrandOnboarding() {
 function Field({ label, children }) {
   return (
     <label className="block">
-      <span className="mono text-[10px] uppercase tracking-[0.3em] text-[#0a0a0a]/70 block mb-2">{label}</span>
+      <span className="mono text-[10px] uppercase tracking-[0.3em] text-[#0a0a0a]/85 block mb-2">{label}</span>
       {children}
     </label>
   );

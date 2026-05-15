@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { motion } from "framer-motion";
 
 export default function TrustRing({ score = 0, size = 72, stroke = 5, label }) {
@@ -27,7 +27,7 @@ export default function TrustRing({ score = 0, size = 72, stroke = 5, label }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="display font-black text-[#0a0a0a]" style={{ fontSize: size * 0.32 }}>{score}</span>
-        {label && <span className="mono text-[9px] text-[#7a7466] uppercase tracking-widest">{label}</span>}
+        {label && <span className="mono text-[9px] text-[#5c5650] uppercase tracking-widest">{label}</span>}
       </div>
     </div>
   );

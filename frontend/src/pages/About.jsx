@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
@@ -17,7 +17,7 @@ export default function About() {
           animate={{ opacity: 1, y: 0 }}
           className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-4"
         >
-          § About Noctra
+          About Noctra
         </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
@@ -34,13 +34,13 @@ export default function About() {
         <div className="grid md:grid-cols-2 gap-12 md:gap-24 mb-24">
           <div className="space-y-6">
             <p className="text-base md:text-lg text-[#0a0a0a]/80 leading-relaxed">
-              Noctra is India's creator deal marketplace — a place where brands find the right voices, and creators find deals worth their time. No cold DMs. No chasing payments. Just clean, direct collabs.
+              Noctra is India's creator deal marketplace. A place where brands find the right voices, and creators find deals worth their time. No cold DMs. No chasing payments. Just clean, direct collabs.
             </p>
             <p className="text-base md:text-lg text-[#0a0a0a]/80 leading-relaxed">
-              We started with a simple observation: India has millions of creators who are seriously good at what they do, and thousands of brands that genuinely want to work with them — but no platform that makes the whole process feel smooth and human. Noctra is that platform.
+              We started with a simple observation that  India has millions of creators who are seriously good at what they do, and thousands of brands that genuinely want to work with them , but no platform that makes the whole process feel smooth and human. Noctra is that platform.
             </p>
             <p className="text-base md:text-lg text-[#0a0a0a]/80 leading-relaxed">
-              Every creator carries a <strong>Trust Score</strong> — built from delivery history, engagement authenticity and brand reviews. Every deal is tracked end-to-end on the platform, so both sides always know exactly where things stand.
+              Every creator carries a <strong>Trust Score</strong> built from delivery history, engagement authenticity and brand reviews. Every deal is tracked end-to-end on the platform, so both sides always know exactly where things stand.
             </p>
           </div>
           <div className="space-y-8">
@@ -50,8 +50,8 @@ export default function About() {
               { label: "Mode", value: "Remote-first" },
               { label: "Contact", value: "social@noctra.co.in" },
             ].map((item) => (
-              <div key={item.label} className="border-t border-[#0a0a0a]/20 pt-5">
-                <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#7a7466] mb-1">{item.label}</div>
+              <div key={item.label} className="border-t border-[#0a0a0a]/30 pt-5">
+                <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#5c5650] mb-1">{item.label}</div>
                 <div className="text-xl font-bold">{item.value}</div>
               </div>
             ))}

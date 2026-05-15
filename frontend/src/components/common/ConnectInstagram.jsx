@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, Instagram, CheckCircle2, AlertTriangle, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -61,22 +61,22 @@ export default function ConnectInstagram({ creator, onUpdated }) {
     return (
       <div className="border border-[#0a0a0a] px-3 py-2.5">
         <div className="flex items-center gap-1.5 mb-0.5">
-          <Instagram size={10} className="text-[#7a7466]" />
-          <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466]">Instagram</div>
+          <Instagram size={10} className="text-[#5c5650]" />
+          <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650]">Instagram</div>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="font-bold text-sm">{creator.instagram_handle}</span>
           <CheckCircle2 size={11} className="text-[#e63946]" />
         </div>
         {creator.followers > 0 && (
-          <div className="mono text-[9px] text-[#7a7466] mt-0.5">
+          <div className="mono text-[9px] text-[#5c5650] mt-0.5">
             {formatFollowers(creator.followers)} followers
           </div>
         )}
         <button
           onClick={handleSync}
           disabled={step === "syncing"}
-          className="mt-1.5 flex items-center gap-1 mono text-[8px] uppercase tracking-widest text-[#7a7466] hover:text-[#e63946] transition disabled:opacity-40"
+          className="mt-1.5 flex items-center gap-1 mono text-[8px] uppercase tracking-widest text-[#5c5650] hover:text-[#e63946] transition disabled:opacity-40"
         >
           {step === "syncing"
             ? <><Loader2 size={8} className="animate-spin" /> Syncing…</>
@@ -91,8 +91,8 @@ export default function ConnectInstagram({ creator, onUpdated }) {
     return (
       <div className="border border-dashed border-[#0a0a0a] px-3 py-2.5">
         <div className="flex items-center gap-1.5 mb-1">
-          <Instagram size={10} className="text-[#7a7466]" />
-          <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466]">Instagram</div>
+          <Instagram size={10} className="text-[#5c5650]" />
+          <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650]">Instagram</div>
         </div>
         <button onClick={() => setStep("input")} className="flex items-center gap-1.5 mono text-[9px] uppercase tracking-widest text-[#e63946] hover:underline">
           Connect account →
@@ -108,7 +108,7 @@ export default function ConnectInstagram({ creator, onUpdated }) {
         <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#e63946] mb-3">Connect Instagram</div>
         <form onSubmit={handleLookup} className="flex gap-2">
           <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7a7466] text-sm font-bold select-none">@</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5c5650] text-sm font-bold select-none">@</span>
             <input
               type="text"
               value={username}
@@ -132,7 +132,7 @@ export default function ConnectInstagram({ creator, onUpdated }) {
     return (
       <div className="border border-[#0a0a0a] p-4 w-full flex items-center gap-2">
         <Loader2 size={14} className="animate-spin text-[#e63946]" />
-        <span className="mono text-[9px] uppercase tracking-widest text-[#7a7466]">Looking up @{username}…</span>
+        <span className="mono text-[9px] uppercase tracking-widest text-[#5c5650]">Looking up @{username}…</span>
       </div>
     );
   }
@@ -146,14 +146,14 @@ export default function ConnectInstagram({ creator, onUpdated }) {
       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="border border-[#0a0a0a] p-4 w-full">
         <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#e63946] mb-3">Is this you?</div>
         <div className="flex items-center gap-4 mb-4">
-          <img src={avatarUrl} alt={preview.username} className="w-14 h-14 rounded-full border border-[#0a0a0a]/20 bg-[#e8e0cd]" />
+          <img src={avatarUrl} alt={preview.username} className="w-14 h-14 rounded-full border border-[#0a0a0a]/30 bg-[#e8e0cd]" />
           <div>
             <div className="font-bold text-base flex items-center gap-1.5">
               {preview.full_name || preview.username}
               {preview.is_verified && <CheckCircle2 size={13} className="text-[#e63946]" />}
             </div>
-            <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466]">@{preview.username}</div>
-            <div className="flex items-center gap-3 mt-1.5 mono text-[9px] uppercase tracking-widest text-[#7a7466]">
+            <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650]">@{preview.username}</div>
+            <div className="flex items-center gap-3 mt-1.5 mono text-[9px] uppercase tracking-widest text-[#5c5650]">
               <span>{formatFollowers(preview.followers)} followers</span>
               <span>{preview.posts} posts</span>
             </div>
@@ -162,8 +162,8 @@ export default function ConnectInstagram({ creator, onUpdated }) {
 
         {preview.is_private && (
           <div className="flex items-start gap-2 bg-[#f4c542]/20 border border-[#f4c542] px-3 py-2.5 mb-4">
-            <AlertTriangle size={12} className="text-[#7a7466] shrink-0 mt-0.5" />
-            <p className="mono text-[8px] uppercase tracking-widest text-[#7a7466]">
+            <AlertTriangle size={12} className="text-[#5c5650] shrink-0 mt-0.5" />
+            <p className="mono text-[8px] uppercase tracking-widest text-[#5c5650]">
               Your account is private. Brands won't see your content — consider making it public.
             </p>
           </div>
@@ -186,7 +186,7 @@ export default function ConnectInstagram({ creator, onUpdated }) {
     return (
       <div className="border border-[#0a0a0a] p-4 w-full flex items-center gap-2">
         <Loader2 size={14} className="animate-spin text-[#e63946]" />
-        <span className="mono text-[9px] uppercase tracking-widest text-[#7a7466]">Saving @{preview?.username}…</span>
+        <span className="mono text-[9px] uppercase tracking-widest text-[#5c5650]">Saving @{preview?.username}…</span>
       </div>
     );
   }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowUpRight, Plus, Loader2 } from "lucide-react";
@@ -156,7 +156,7 @@ export default function BrandDashboard() {
       <Navbar />
 
       <section className="max-w-7xl mx-auto px-5 md:px-10 pt-8 md:pt-12 pb-8">
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ Brand Studio · {brand?.name || "—"}</div>
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">Brand Studio · {brand?.name || "—"}</div>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <h1 className="display text-5xl md:text-7xl font-black leading-[0.9]">
             Your<br/><span className="italic text-[#e63946]">pipeline</span>.
@@ -207,8 +207,8 @@ export default function BrandDashboard() {
                   )}
                   <div className="mono text-[9px] uppercase tracking-widest text-[#e63946] mb-2">{c.target_niche} · {c.platform}</div>
                   <div className="display text-2xl font-black mb-1">{c.name}</div>
-                  <div className="text-sm text-[#7a7466] mb-4 line-clamp-2">{c.description}</div>
-                  <div className="flex items-center justify-between mono text-[9px] uppercase tracking-widest text-[#7a7466]">
+                  <div className="text-sm text-[#5c5650] mb-4 line-clamp-2">{c.description}</div>
+                  <div className="flex items-center justify-between mono text-[9px] uppercase tracking-widest text-[#5c5650]">
                     <span>{c.applicant_count || 0} applicants</span>
                     <span>{formatINR(c.budget_min)}–{formatINR(c.budget_max)}</span>
                   </div>
@@ -220,13 +220,13 @@ export default function BrandDashboard() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {dealRooms.length === 0 ? (
               <div className="col-span-3 border border-dashed border-[#0a0a0a] py-16 text-center">
-                <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#7a7466]">No deal rooms yet — accept an applicant from a campaign to create one.</div>
+                <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#5c5650]">No deal rooms yet — accept an applicant from a campaign to create one.</div>
               </div>
             ) : dealRooms.map((r) => (
               <Link key={r.id} to={`/deal-room/${r.id}`} className="border border-[#0a0a0a] p-5 hover:shadow-[4px_4px_0_0_#0a0a0a] transition-shadow">
                 <div className="mono text-[9px] uppercase tracking-widest text-[#e63946] mb-2">{r.status}</div>
                 <div className="display text-xl font-black mb-1">{r.campaign_name}</div>
-                <div className="mono text-[10px] uppercase tracking-widest text-[#7a7466]">with {r.creator_name}</div>
+                <div className="mono text-[10px] uppercase tracking-widest text-[#5c5650]">with {r.creator_name}</div>
               </Link>
             ))}
           </div>
@@ -240,7 +240,7 @@ export default function BrandDashboard() {
                 </div>
                 <div className="flex-1 p-3 space-y-3 bg-[#efe8d8]">
                   {grouped[col.key]?.length === 0 ? (
-                    <div className="text-[#7a7466] text-xs mono uppercase tracking-widest text-center py-8">Empty</div>
+                    <div className="text-[#5c5650] text-xs mono uppercase tracking-widest text-center py-8">Empty</div>
                   ) : (
                     grouped[col.key].map((d) => (
                       <DealCard
@@ -287,8 +287,8 @@ function DeleteZone() {
 
   return (
     <section className="max-w-7xl mx-auto px-5 md:px-10 pb-8">
-      <div className="border-t border-[#0a0a0a]/15 pt-6 mt-2">
-        <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466] mb-2">Danger zone</div>
+      <div className="border-t border-[#0a0a0a]/25 pt-6 mt-2">
+        <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650] mb-2">Danger zone</div>
         {confirming ? (
           <div className="flex items-center gap-4 flex-wrap">
             <span className="text-sm text-[#e63946]">This permanently deletes your account and all data.</span>
@@ -299,14 +299,14 @@ function DeleteZone() {
             >
               {deleting ? "Deleting…" : "Yes, delete →"}
             </button>
-            <button onClick={() => setConfirming(false)} className="mono text-[10px] uppercase tracking-widest text-[#7a7466] hover:text-[#0a0a0a]">
+            <button onClick={() => setConfirming(false)} className="mono text-[10px] uppercase tracking-widest text-[#5c5650] hover:text-[#0a0a0a]">
               Cancel
             </button>
           </div>
         ) : (
           <button
             onClick={() => setConfirming(true)}
-            className="mono text-[10px] uppercase tracking-widest text-[#7a7466] hover:text-[#e63946] transition-colors"
+            className="mono text-[10px] uppercase tracking-widest text-[#5c5650] hover:text-[#e63946] transition-colors"
           >
             Delete account →
           </button>
@@ -319,7 +319,7 @@ function DeleteZone() {
 function Stat({ label, value, accent }) {
   return (
     <div className={`border-r border-b border-[#0a0a0a] p-5 ${accent ? "bg-[#0a0a0a] text-[#efe8d8]" : ""}`}>
-      <div className={`mono text-[10px] uppercase tracking-[0.3em] mb-1 ${accent ? "text-[#efe8d8]/60" : "text-[#7a7466]"}`}>{label}</div>
+      <div className={`mono text-[10px] uppercase tracking-[0.3em] mb-1 ${accent ? "text-[#efe8d8]/85" : "text-[#5c5650]"}`}>{label}</div>
       <div className="display text-3xl md:text-4xl font-black">{value}</div>
     </div>
   );
@@ -338,10 +338,10 @@ function DealCard({ deal, hasAction, actionLabel, onAction, paying }) {
         <img src={deal.creator_avatar} alt="" className="w-8 h-8 rounded-full border border-[#0a0a0a] object-cover" />
         <div className="flex-1 min-w-0">
           <div className="font-bold text-xs truncate">{deal.creator_name}</div>
-          <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466] truncate">{deal.deliverable}</div>
+          <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650] truncate">{deal.deliverable}</div>
         </div>
       </div>
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#0a0a0a]/15">
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#0a0a0a]/25">
         <span className="display text-base font-black text-[#e63946]">{formatINR(deal.amount)}</span>
         {hasAction && (
           <button
@@ -355,10 +355,10 @@ function DealCard({ deal, hasAction, actionLabel, onAction, paying }) {
         )}
       </div>
       {deal.status === "Requested" && (
-        <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466] mt-2">⏳ Awaiting creator</div>
+        <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650] mt-2">⏳ Awaiting creator</div>
       )}
       {deal.status === "Confirmed" && (
-        <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466] mt-2">⏳ Creator going live</div>
+        <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650] mt-2">⏳ Creator going live</div>
       )}
       {deal.escrow && (
         <div className="mono text-[9px] uppercase tracking-widest text-[#e63946] mt-2">◉ Escrow held</div>

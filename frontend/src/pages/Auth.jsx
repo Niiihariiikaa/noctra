@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Briefcase, Sparkles, Scissors, ArrowUpRight, Eye, EyeOff } from "lucide-react";
@@ -172,7 +172,7 @@ export default function Auth() {
     <div className="min-h-screen bg-[#efe8d8] text-[#0a0a0a]" data-testid="auth-page">
       <Navbar />
       <section className="max-w-6xl mx-auto px-5 md:px-10 py-12">
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ Join the hub</div>
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">Join the hub</div>
         <h1 className="display text-5xl md:text-7xl lg:text-8xl font-black leading-[0.9]">
           {existing
             ? <>Switch your<br /><span className="italic text-[#e63946]">role</span>.</>
@@ -198,15 +198,31 @@ export default function Auth() {
         {/* Google sign-in — always visible when configured */}
         {GOOGLE_CLIENT_ID && (
           <div className="mt-8 max-w-xl">
-            {mode === "register" && !role && (
-              <p className="mono text-[9px] uppercase tracking-widest text-[#7a7466] mb-3">
-                Sign up with Google — you'll pick a role after
-              </p>
-            )}
-            <div ref={googleDivRef} className="min-h-[44px]" />
-            <div className="flex items-center gap-3 mt-4">
+            {/* Hidden GSI-rendered button — we trigger it programmatically */}
+            <div ref={googleDivRef} className="absolute opacity-0 pointer-events-none" style={{ width: 1, height: 1, overflow: "hidden" }} />
+
+            <button
+              type="button"
+              onClick={() => {
+                const btn = googleDivRef.current?.querySelector('div[role="button"]') || googleDivRef.current?.querySelector("button");
+                if (btn) btn.click();
+              }}
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-[#0a0a0a] bg-[#efe8d8] hover:bg-[#e8e0cd] transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.616z" fill="#4285F4"/>
+                <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+                <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+              </svg>
+              <span className="mono text-[10px] uppercase tracking-widest text-[#0a0a0a]">
+                {mode === "login" ? "Sign in with Google" : "Sign up with Google"}
+              </span>
+            </button>
+
+            <div className="flex items-center gap-3 mt-5">
               <div className="flex-1 h-px bg-[#0a0a0a]/20" />
-              <span className="mono text-[9px] uppercase tracking-widest text-[#7a7466]">or continue with email</span>
+              <span className="mono text-[9px] uppercase tracking-widest text-[#5c5650]">or continue with email</span>
               <div className="flex-1 h-px bg-[#0a0a0a]/20" />
             </div>
           </div>
@@ -274,7 +290,7 @@ export default function Auth() {
               <>
                 <Field label="Instagram Username">
                   <div className="flex items-center border border-[#0a0a0a] focus-within:bg-[#e8e0cd]">
-                    <span className="px-3 py-3 text-sm text-[#7a7466] border-r border-[#0a0a0a] select-none">@</span>
+                    <span className="px-3 py-3 text-sm text-[#5c5650] border-r border-[#0a0a0a] select-none">@</span>
                     <input
                       value={instagramUsername}
                       onChange={(e) => setInstagramUsername(e.target.value.replace(/^@/, ""))}
@@ -334,7 +350,7 @@ export default function Auth() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7a7466] hover:text-[#0a0a0a]"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5c5650] hover:text-[#0a0a0a]"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -377,7 +393,7 @@ export default function Auth() {
               {submitting ? (mode === "register" ? "Creating account…" : "Signing in…") : (mode === "register" ? "Create account →" : "Sign in →")}
             </button>
 
-            <p className="mono text-[9px] uppercase tracking-widest text-[#7a7466] mt-4 text-center">
+            <p className="mono text-[9px] uppercase tracking-widest text-[#5c5650] mt-4 text-center">
               {mode === "register"
                 ? <>Already have an account? <button type="button" onClick={() => setMode("login")} className="underline text-[#0a0a0a]">Sign in</button></>
                 : <>New here? <button type="button" onClick={() => setMode("register")} className="underline text-[#0a0a0a]">Create account</button></>
@@ -386,7 +402,7 @@ export default function Auth() {
           </motion.form>
         )}
 
-        <p className="mt-10 text-sm text-[#7a7466]">
+        <p className="mt-10 text-sm text-[#5c5650]">
           Browse without signing in: <Link to="/discover" className="underline text-[#0a0a0a]">Discover creators →</Link>
         </p>
       </section>
@@ -400,7 +416,7 @@ export default function Auth() {
 function Field({ label, children }) {
   return (
     <label className="block mb-4">
-      <span className="mono text-[10px] uppercase tracking-[0.3em] text-[#0a0a0a]/70 block mb-2">{label}</span>
+      <span className="mono text-[10px] uppercase tracking-[0.3em] text-[#0a0a0a]/85 block mb-2">{label}</span>
       {children}
     </label>
   );

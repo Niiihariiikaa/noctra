@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, SlidersHorizontal, X } from "lucide-react";
@@ -67,7 +67,7 @@ export default function Discover() {
       <Navbar />
 
       <section className="max-w-7xl mx-auto px-5 md:px-10 pt-8 md:pt-12 pb-10">
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ Discover creators</div>
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">Discover creators</div>
         <h1 className="display text-5xl md:text-7xl lg:text-8xl font-black leading-[0.9] mb-6">
           Find your<br/><span className="italic text-[#e63946]">people</span>.
         </h1>
@@ -80,11 +80,11 @@ export default function Discover() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, niche, bio…"
-              className="flex-1 bg-transparent outline-none text-sm placeholder:text-[#7a7466]"
+              className="flex-1 bg-transparent outline-none text-sm placeholder:text-[#5c5650]"
               data-testid="search-input"
             />
             {search && (
-              <button onClick={() => setSearch("")} className="text-[#7a7466] hover:text-[#e63946]" aria-label="Clear">
+              <button onClick={() => setSearch("")} className="text-[#5c5650] hover:text-[#e63946]" aria-label="Clear">
                 <X size={14} />
               </button>
             )}
@@ -164,7 +164,7 @@ export default function Discover() {
         {/* Results */}
         <div>
           <div className="flex items-center justify-between mb-5">
-            <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#7a7466]" data-testid="results-count">
+            <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#5c5650]" data-testid="results-count">
               {loading ? "Loading…" : `${creators.length} ${creators.length === 1 ? "creator" : "creators"}`}
             </div>
           </div>

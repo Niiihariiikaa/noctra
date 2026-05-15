@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Loader2, TrendingUp, Inbox, CheckCircle2, Star, Camera } from "lucide-react";
@@ -102,7 +102,7 @@ export default function CreatorDashboard() {
       <Navbar />
 
       <section className="max-w-7xl mx-auto px-5 md:px-10 pt-8 md:pt-12 pb-8">
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ Creator Studio</div>
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">Creator Studio</div>
         <div className="flex items-end justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
             <AvatarUploader creator={creator} onUpdated={setCreator} />
@@ -114,7 +114,7 @@ export default function CreatorDashboard() {
             <div className="flex items-center gap-3 border border-[#0a0a0a] bg-[#efe8d8] p-3">
               <TrustRing score={creator.trust_score} size={56} stroke={3} />
               <div>
-                <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#7a7466]">Trust score</div>
+                <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#5c5650]">Trust score</div>
                 <div className="display text-xl font-black">{creator.trust_score}/100</div>
               </div>
             </div>
@@ -168,7 +168,7 @@ export default function CreatorDashboard() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {campaigns.length === 0 ? (
               <div className="col-span-3 border border-dashed border-[#0a0a0a] py-16 text-center">
-                <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#7a7466]">No campaigns in your niche yet. Check back soon.</div>
+                <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#5c5650]">No campaigns in your niche yet. Check back soon.</div>
               </div>
             ) : campaigns.map((c) => {
               const isNew = c.created_at && (Date.now() - new Date(c.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
@@ -179,8 +179,8 @@ export default function CreatorDashboard() {
                   )}
                   <div className="mono text-[9px] uppercase tracking-widest text-[#e63946] mb-2">{c.brand_name} · {c.target_niche}</div>
                   <div className="display text-2xl font-black mb-1">{c.name}</div>
-                  <div className="text-sm text-[#7a7466] mb-4 line-clamp-2">{c.description}</div>
-                  <div className="flex items-center justify-between mono text-[9px] uppercase tracking-widest text-[#7a7466]">
+                  <div className="text-sm text-[#5c5650] mb-4 line-clamp-2">{c.description}</div>
+                  <div className="flex items-center justify-between mono text-[9px] uppercase tracking-widest text-[#5c5650]">
                     <span>{c.deliverables}</span>
                     <span className="text-[#e63946] font-bold">{formatINR(c.budget_min)}–{formatINR(c.budget_max)}</span>
                   </div>
@@ -192,13 +192,13 @@ export default function CreatorDashboard() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {dealRooms.length === 0 ? (
               <div className="col-span-3 border border-dashed border-[#0a0a0a] py-16 text-center">
-                <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#7a7466]">No deal rooms yet — apply to a campaign and get accepted.</div>
+                <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#5c5650]">No deal rooms yet — apply to a campaign and get accepted.</div>
               </div>
             ) : dealRooms.map((r) => (
               <Link key={r.id} to={`/deal-room/${r.id}`} className="border border-[#0a0a0a] p-5 hover:shadow-[4px_4px_0_0_#0a0a0a] transition-shadow">
                 <div className="mono text-[9px] uppercase tracking-widest text-[#e63946] mb-2">{r.status}</div>
                 <div className="display text-xl font-black mb-1">{r.campaign_name}</div>
-                <div className="mono text-[10px] uppercase tracking-widest text-[#7a7466]">{r.brand_name}</div>
+                <div className="mono text-[10px] uppercase tracking-widest text-[#5c5650]">{r.brand_name}</div>
               </Link>
             ))}
           </div>
@@ -241,17 +241,17 @@ export default function CreatorDashboard() {
                     <span className="w-9 h-9 flex items-center justify-center text-sm font-bold text-[#efe8d8]" style={{ background: d.brand_logo_color }}>{d.brand_name?.[0]}</span>
                     <div>
                       <div className="font-bold text-sm">{d.brand_name}</div>
-                      <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466]">{d.status}</div>
+                      <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650]">{d.status}</div>
                     </div>
                   </div>
                   <div className="display text-2xl font-black text-[#e63946]">{formatINR(d.amount)}</div>
                 </div>
 
-                <div className="text-sm text-[#0a0a0a]/80 border-t border-[#0a0a0a]/15 pt-3">{d.deliverable}</div>
-                {d.deadline && <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466] mt-2">Due {new Date(d.deadline).toLocaleDateString()}</div>}
+                <div className="text-sm text-[#0a0a0a]/80 border-t border-[#0a0a0a]/25 pt-3">{d.deliverable}</div>
+                {d.deadline && <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650] mt-2">Due {new Date(d.deadline).toLocaleDateString()}</div>}
 
                 {d.status === "Negotiating" && (
-                  <div className="mt-3 mono text-[9px] uppercase tracking-widest text-[#7a7466]">⏳ Waiting for brand to pay</div>
+                  <div className="mt-3 mono text-[9px] uppercase tracking-widest text-[#5c5650]">⏳ Waiting for brand to pay</div>
                 )}
 
                 {d.status === "Requested" && (
@@ -319,8 +319,8 @@ function DeleteZone() {
 
   return (
     <section className="max-w-7xl mx-auto px-5 md:px-10 pb-8">
-      <div className="border-t border-[#0a0a0a]/15 pt-6 mt-2">
-        <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466] mb-2">Danger zone</div>
+      <div className="border-t border-[#0a0a0a]/25 pt-6 mt-2">
+        <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650] mb-2">Danger zone</div>
         {confirming ? (
           <div className="flex items-center gap-4 flex-wrap">
             <span className="text-sm text-[#e63946]">This permanently deletes your account and all data.</span>
@@ -331,14 +331,14 @@ function DeleteZone() {
             >
               {deleting ? "Deleting…" : "Yes, delete →"}
             </button>
-            <button onClick={() => setConfirming(false)} className="mono text-[10px] uppercase tracking-widest text-[#7a7466] hover:text-[#0a0a0a]">
+            <button onClick={() => setConfirming(false)} className="mono text-[10px] uppercase tracking-widest text-[#5c5650] hover:text-[#0a0a0a]">
               Cancel
             </button>
           </div>
         ) : (
           <button
             onClick={() => setConfirming(true)}
-            className="mono text-[10px] uppercase tracking-widest text-[#7a7466] hover:text-[#e63946] transition-colors"
+            className="mono text-[10px] uppercase tracking-widest text-[#5c5650] hover:text-[#e63946] transition-colors"
           >
             Delete account →
           </button>
@@ -352,7 +352,7 @@ function Stat({ icon: Icon, label, value, accent }) {
   return (
     <div className={`border-r border-b border-[#0a0a0a] p-5 ${accent ? "bg-[#0a0a0a] text-[#efe8d8]" : ""}`}>
       <Icon size={18} className="mb-3 opacity-70" />
-      <div className={`mono text-[10px] uppercase tracking-[0.3em] mb-1 ${accent ? "text-[#efe8d8]/60" : "text-[#7a7466]"}`}>{label}</div>
+      <div className={`mono text-[10px] uppercase tracking-[0.3em] mb-1 ${accent ? "text-[#efe8d8]/85" : "text-[#5c5650]"}`}>{label}</div>
       <div className="display text-2xl md:text-3xl font-black">{value}</div>
     </div>
   );
@@ -361,7 +361,7 @@ function Stat({ icon: Icon, label, value, accent }) {
 function Mini({ label, v }) {
   return (
     <div className="border border-[#0a0a0a] px-3 py-2.5">
-      <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466]">{label}</div>
+      <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650]">{label}</div>
       <div className="font-bold mt-0.5">{v}</div>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Plus, Trash2 } from "lucide-react";
@@ -68,7 +68,7 @@ export default function CreateCampaign() {
     <div className="min-h-screen bg-[#efe8d8] text-[#0a0a0a]">
       <Navbar />
       <section className="max-w-3xl mx-auto px-5 md:px-10 py-12">
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ New Campaign</div>
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">New Campaign</div>
         <h1 className="display text-5xl md:text-7xl font-black leading-[0.9] mb-10">
           Create a<br /><span className="italic text-[#e63946]">campaign.</span>
         </h1>
@@ -113,9 +113,9 @@ export default function CreateCampaign() {
             </div>
             {concepts.map((c, i) => (
               <div key={i} className="border border-[#0a0a0a]/30 p-4 space-y-3 relative">
-                <div className="mono text-[9px] uppercase tracking-widest text-[#7a7466]">Concept {i + 1}</div>
+                <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650]">Concept {i + 1}</div>
                 {concepts.length > 1 && (
-                  <button type="button" onClick={() => removeConcept(i)} className="absolute top-3 right-3 text-[#7a7466] hover:text-[#e63946]">
+                  <button type="button" onClick={() => removeConcept(i)} className="absolute top-3 right-3 text-[#5c5650] hover:text-[#e63946]">
                     <Trash2 size={13} />
                   </button>
                 )}
@@ -172,7 +172,7 @@ const inp = "w-full bg-transparent border border-[#0a0a0a] px-3 py-3 text-sm foc
 function Field({ label, children }) {
   return (
     <label className="block">
-      <span className="mono text-[10px] uppercase tracking-[0.3em] text-[#0a0a0a]/70 block mb-2">{label}</span>
+      <span className="mono text-[10px] uppercase tracking-[0.3em] text-[#0a0a0a]/85 block mb-2">{label}</span>
       {children}
     </label>
   );

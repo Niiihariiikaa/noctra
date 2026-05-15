@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Search, MapPin, Star, ArrowUpRight, Clapperboard, Megaphone, Wrench } from "lucide-react";
 import Navbar from "../components/layout/Navbar";
@@ -37,7 +37,7 @@ export default function Services() {
       <Navbar />
 
       <section className="max-w-7xl mx-auto px-5 md:px-10 pt-8 md:pt-12 pb-10">
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ Services — Editors & SMMs</div>
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">Services — Editors & SMMs</div>
         <h1 className="display text-5xl md:text-7xl lg:text-8xl font-black leading-[0.9] mb-6">
           The craft<br/>behind the<br/><span className="italic text-[#e63946]">content</span>.
         </h1>
@@ -49,7 +49,7 @@ export default function Services() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, skills…"
-              className="flex-1 bg-transparent outline-none text-sm placeholder:text-[#7a7466]"
+              className="flex-1 bg-transparent outline-none text-sm placeholder:text-[#5c5650]"
               data-testid="services-search"
             />
           </div>
@@ -71,7 +71,7 @@ export default function Services() {
 
       <section className="max-w-7xl mx-auto px-5 md:px-10 pb-32">
         {loading ? (
-          <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#7a7466]">Loading…</div>
+          <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#5c5650]">Loading…</div>
         ) : items.length === 0 ? (
           <EmptyState title="No services match" subtitle="Try a different role or search." />
         ) : (
@@ -111,26 +111,26 @@ function EditorCard({ editor, index }) {
           <img src={editor.avatar} alt="" className="w-10 h-10 rounded-full border border-[#0a0a0a] object-cover" />
           <div>
             <h3 className="display text-xl font-black leading-none">{editor.name}</h3>
-            <div className="mono text-[10px] uppercase tracking-[0.2em] text-[#7a7466] mt-0.5">
+            <div className="mono text-[10px] uppercase tracking-[0.2em] text-[#5c5650] mt-0.5">
               <MapPin size={9} className="inline -mt-0.5 mr-1" />{editor.city}
             </div>
           </div>
         </div>
-        <p className="text-sm text-[#0a0a0a]/70 mt-2 line-clamp-2 min-h-[2.5rem]">{editor.bio}</p>
+        <p className="text-sm text-[#0a0a0a]/85 mt-2 line-clamp-2 min-h-[2.5rem]">{editor.bio}</p>
         <div className="flex flex-wrap gap-1 mt-3">
           {editor.skills?.slice(0, 3).map((s) => (
             <span key={s} className="mono text-[9px] uppercase tracking-widest border border-[#0a0a0a]/40 px-2 py-0.5">{s}</span>
           ))}
         </div>
-        <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#0a0a0a]/15">
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#0a0a0a]/25">
           <div>
-            <div className="mono text-[9px] uppercase tracking-[0.25em] text-[#7a7466]">From</div>
+            <div className="mono text-[9px] uppercase tracking-[0.25em] text-[#5c5650]">From</div>
             <div className="display text-xl font-black text-[#e63946]">{formatINR(editor.price_per_project)}</div>
           </div>
           <div className="flex items-center gap-1 text-sm">
             <Star size={12} className="text-[#e63946]" fill="currentColor" />
             <span className="font-bold">{editor.rating}</span>
-            <span className="text-[#7a7466]">· {editor.projects_done} projects</span>
+            <span className="text-[#5c5650]">· {editor.projects_done} projects</span>
           </div>
         </div>
       </div>

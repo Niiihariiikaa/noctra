@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { motion } from "framer-motion";
 import { Mail, Instagram } from "lucide-react";
 import Navbar from "../components/layout/Navbar";
@@ -16,7 +16,7 @@ export default function Contact() {
           animate={{ opacity: 1, y: 0 }}
           className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-4"
         >
-          § Contact Us
+          Contact Us
         </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
@@ -30,7 +30,7 @@ export default function Contact() {
         <div className="grid md:grid-cols-2 gap-16 md:gap-24">
           <div className="space-y-12">
             <div>
-              <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#7a7466] mb-2">General enquiries</div>
+              <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#5c5650] mb-2">General enquiries</div>
               <p className="text-sm text-[#0a0a0a]/80 leading-relaxed mb-4">
                 For partnerships, brand onboarding, creator support, or anything else — drop us a mail and we'll get back within 24 hours.
               </p>
@@ -43,7 +43,7 @@ export default function Contact() {
             </div>
 
             <div>
-              <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#7a7466] mb-2">Follow us</div>
+              <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#5c5650] mb-2">Follow us</div>
               <a
                 href="https://instagram.com/noctra.co.in"
                 target="_blank"
@@ -55,7 +55,7 @@ export default function Contact() {
             </div>
 
             <div>
-              <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#7a7466] mb-2">Response time</div>
+              <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#5c5650] mb-2">Response time</div>
               <p className="text-sm text-[#0a0a0a]/80">We typically respond within 24 hours on business days.</p>
             </div>
           </div>

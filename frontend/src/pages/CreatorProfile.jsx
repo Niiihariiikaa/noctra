@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowUpRight, MapPin, Star, Instagram, Heart, MessageCircle, Play, Loader2 } from "lucide-react";
@@ -109,7 +109,7 @@ export default function CreatorProfile() {
         <div className="absolute inset-0 bg-[#0a0a0a]/40" />
         <div className="absolute bottom-6 left-5 md:left-10 right-5 md:right-10 flex items-end justify-between gap-4">
           <div>
-            <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#efe8d8]/80 mb-2">{creator.niche} · {creator.city}</div>
+            <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#efe8d8]/90 mb-2">{creator.niche} · {creator.city}</div>
             <h1 className="display text-5xl md:text-8xl font-black text-[#efe8d8] leading-[0.9]" data-testid="creator-name">{creator.name}</h1>
           </div>
           <div className="hidden md:block bg-[#efe8d8] border border-[#0a0a0a] p-3">
@@ -176,8 +176,8 @@ export default function CreatorProfile() {
                           </div>
                         </div>
                         <div className="px-3 py-2 border-t border-[#0a0a0a] text-xs flex items-center justify-between gap-2">
-                          <span className="mono text-[9px] uppercase tracking-widest text-[#7a7466]">{p.type}</span>
-                          <span className="text-[#0a0a0a]/60 truncate text-right">{p.caption?.slice(0, 40) || "View post"}</span>
+                          <span className="mono text-[9px] uppercase tracking-widest text-[#5c5650]">{p.type}</span>
+                          <span className="text-[#0a0a0a]/80 truncate text-right">{p.caption?.slice(0, 40) || "View post"}</span>
                         </div>
                       </a>
                     ) : (
@@ -188,7 +188,7 @@ export default function CreatorProfile() {
                         </div>
                         <div className="px-3 py-2 border-t border-[#0a0a0a] text-xs flex justify-between">
                           <span className="font-medium truncate">{p.campaign}</span>
-                          <span className="text-[#7a7466] truncate ml-2">{p.brand}</span>
+                          <span className="text-[#5c5650] truncate ml-2">{p.brand}</span>
                         </div>
                       </div>
                     )}
@@ -216,7 +216,7 @@ export default function CreatorProfile() {
                   <p className="text-sm text-[#0a0a0a]/80">{r.comment}</p>
                 </div>
               ))}
-              {!creator.reviews?.length && <p className="text-[#7a7466] text-sm">No reviews yet.</p>}
+              {!creator.reviews?.length && <p className="text-[#5c5650] text-sm">No reviews yet.</p>}
             </div>
           </div>
         </div>
@@ -243,7 +243,7 @@ export default function CreatorProfile() {
             >
               Book a deal <ArrowUpRight size={14} />
             </button>
-            <p className="mono text-[9px] uppercase tracking-widest text-[#7a7466] text-center">Deals tracked end-to-end on Noctra</p>
+            <p className="mono text-[9px] uppercase tracking-widest text-[#5c5650] text-center">Deals tracked end-to-end on Noctra</p>
           </div>
         </aside>
       </section>
@@ -257,7 +257,7 @@ export default function CreatorProfile() {
             onClick={(e) => e.stopPropagation()}
             className="bg-[#efe8d8] border border-[#0a0a0a] w-full md:max-w-lg p-6 md:p-8"
           >
-            <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-2">§ Book a deal</div>
+            <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-2">Book a deal</div>
             <h3 className="display text-3xl font-black mb-5">{DELIVERABLES.find((d) => d.key === deliverable).label} with {creator.name}</h3>
             <label className="mono text-[10px] uppercase tracking-[0.3em] block mb-2">From brand</label>
             <select
@@ -300,7 +300,7 @@ export default function CreatorProfile() {
 function Stat({ label, value }) {
   return (
     <div className="border-r border-b border-[#0a0a0a] p-5">
-      <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#7a7466] mb-1">{label}</div>
+      <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#5c5650] mb-1">{label}</div>
       <div className="display text-3xl md:text-4xl font-black">{value}</div>
     </div>
   );

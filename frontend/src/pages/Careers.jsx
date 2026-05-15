@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, CheckCircle2, MapPin, Clock, IndianRupee } from "lucide-react";
 import { toast } from "sonner";
@@ -45,7 +45,7 @@ export default function Careers() {
           animate={{ opacity: 1, y: 0 }}
           className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-4"
         >
-          § Careers at Noctra
+          Careers at Noctra
         </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
@@ -55,7 +55,7 @@ export default function Careers() {
         >
           Help us<br /><span className="italic text-[#e63946]">build</span><br />the thing.
         </motion.h1>
-        <p className="text-base text-[#0a0a0a]/70 max-w-xl mb-16 leading-relaxed">
+        <p className="text-base text-[#0a0a0a]/85 max-w-xl mb-16 leading-relaxed">
           We're a small, fast-moving team building India's creator marketplace from the ground up. If that sounds like your kind of chaos — read on.
         </p>
       </section>
@@ -77,7 +77,7 @@ export default function Careers() {
                   { icon: Clock, label: "1 month" },
                   { icon: MapPin, label: "Remote (India)" },
                 ].map(({ icon: Icon, label }) => (
-                  <div key={label} className="flex items-center gap-1.5 mono text-[9px] uppercase tracking-widest text-[#7a7466]">
+                  <div key={label} className="flex items-center gap-1.5 mono text-[9px] uppercase tracking-widest text-[#5c5650]">
                     <Icon size={11} /> {label}
                   </div>
                 ))}
@@ -135,7 +135,7 @@ export default function Careers() {
               >
                 <CheckCircle2 size={40} className="mx-auto mb-4 text-[#0a0a0a]" strokeWidth={1.5} />
                 <div className="display text-3xl font-black mb-2">Application sent!</div>
-                <p className="text-sm text-[#7a7466]">We'll review your application and reach out to <strong className="text-[#0a0a0a]">{form.email}</strong> within a few days.</p>
+                <p className="text-sm text-[#5c5650]">We'll review your application and reach out to <strong className="text-[#0a0a0a]">{form.email}</strong> within a few days.</p>
               </motion.div>
             ) : (
               <div className="border border-[#0a0a0a] p-6 md:p-8">
@@ -193,7 +193,7 @@ export default function Careers() {
                   >
                     {submitting ? <><Loader2 size={12} className="animate-spin" /> Sending…</> : "Submit application →"}
                   </button>
-                  <p className="mono text-[8px] uppercase tracking-widest text-[#7a7466] text-center">
+                  <p className="mono text-[8px] uppercase tracking-widest text-[#5c5650] text-center">
                     Or email us directly at social@noctra.co.in
                   </p>
                 </form>
@@ -223,7 +223,7 @@ function JDSection({ title, children }) {
 function Field({ label, children }) {
   return (
     <div>
-      <div className="mono text-[8px] uppercase tracking-widest text-[#7a7466] mb-1.5">{label}</div>
+      <div className="mono text-[8px] uppercase tracking-widest text-[#5c5650] mb-1.5">{label}</div>
       {children}
     </div>
   );

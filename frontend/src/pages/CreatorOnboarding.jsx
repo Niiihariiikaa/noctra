@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -48,7 +48,7 @@ export default function CreatorOnboarding() {
     <div className="min-h-screen bg-[#efe8d8] text-[#0a0a0a]">
       <Navbar />
       <section className="max-w-2xl mx-auto px-5 py-12">
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">§ Creator Onboarding</div>
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-3">Creator Onboarding</div>
         <h1 className="display text-5xl md:text-7xl font-black leading-[0.9] mb-10">
           Set up your<br /><span className="italic text-[#e63946]">profile.</span>
         </h1>
@@ -98,8 +98,8 @@ export default function CreatorOnboarding() {
             </div>
           </Field>
 
-          <div className="pt-2 border-t border-[#0a0a0a]/20">
-            <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#7a7466] mb-4">
+          <div className="pt-2 border-t border-[#0a0a0a]/30">
+            <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#5c5650] mb-4">
               Your Instagram handle is saved as <span className="text-[#0a0a0a] font-bold">@{user?.instagram_username || user?.name}</span>. Connect and verify it from your dashboard after signing up.
             </div>
             <button
@@ -119,7 +119,7 @@ export default function CreatorOnboarding() {
 function Field({ label, children }) {
   return (
     <label className="block">
-      <span className="mono text-[10px] uppercase tracking-[0.3em] text-[#0a0a0a]/70 block mb-2">{label}</span>
+      <span className="mono text-[10px] uppercase tracking-[0.3em] text-[#0a0a0a]/85 block mb-2">{label}</span>
       {children}
     </label>
   );

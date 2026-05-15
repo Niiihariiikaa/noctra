@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { motion } from "framer-motion";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
@@ -17,7 +17,7 @@ export default function Privacy() {
           animate={{ opacity: 1, y: 0 }}
           className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-4"
         >
-          § Privacy Policy
+          Privacy Policy
         </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
@@ -27,7 +27,7 @@ export default function Privacy() {
         >
           Your data,<br /><span className="italic text-[#e63946]">your rules.</span>
         </motion.h1>
-        <p className="mono text-[9px] uppercase tracking-widest text-[#7a7466] mb-12">
+        <p className="mono text-[9px] uppercase tracking-widest text-[#5c5650] mb-12">
           Last updated: {LAST_UPDATED}
         </p>
 
@@ -110,7 +110,7 @@ export default function Privacy() {
 
 function PolicySection({ title, children }) {
   return (
-    <div className="border-t border-[#0a0a0a]/15 pt-8">
+    <div className="border-t border-[#0a0a0a]/25 pt-8">
       <h2 className="display text-2xl font-black mb-4">{title}</h2>
       <div className="space-y-3 text-sm text-[#0a0a0a]/80 leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-2 [&_strong]:text-[#0a0a0a] [&_strong]:font-bold">
         {children}
