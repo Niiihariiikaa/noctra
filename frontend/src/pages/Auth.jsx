@@ -116,7 +116,6 @@ export default function Auth() {
 
     const renderBtn = () => {
       if (!window.google || !googleDivRef.current) return;
-      // Clear previous render before re-rendering
       googleDivRef.current.innerHTML = "";
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
@@ -124,10 +123,10 @@ export default function Auth() {
       });
       window.google.accounts.id.renderButton(googleDivRef.current, {
         type: "standard",
-        theme: "outline",
+        theme: "filled_black",
         size: "large",
         text: mode === "login" ? "signin_with" : "signup_with",
-        width: Math.min(googleDivRef.current.offsetWidth || 400, 400),
+        width: 400,
       });
     };
 
@@ -137,7 +136,7 @@ export default function Auth() {
       window.addEventListener("gsi-ready", renderBtn, { once: true });
       return () => window.removeEventListener("gsi-ready", renderBtn);
     }
-  }, [mode, role]); // re-run when role changes so button appears as soon as form is visible
+  }, [mode]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -198,27 +197,23 @@ export default function Auth() {
         {/* Google sign-in — always visible when configured */}
         {GOOGLE_CLIENT_ID && (
           <div className="mt-8 max-w-xl">
-            {/* Hidden GSI-rendered button — we trigger it programmatically */}
-            <div ref={googleDivRef} className="absolute opacity-0 pointer-events-none" style={{ width: 1, height: 1, overflow: "hidden" }} />
-
-            <button
-              type="button"
-              onClick={() => {
-                const btn = googleDivRef.current?.querySelector('div[role="button"]') || googleDivRef.current?.querySelector("button");
-                if (btn) btn.click();
-              }}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-[#0a0a0a] bg-[#efe8d8] hover:bg-[#e8e0cd] transition-colors"
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.616z" fill="#4285F4"/>
-                <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
-                <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-              </svg>
-              <span className="mono text-[10px] uppercase tracking-widest text-[#0a0a0a]">
-                {mode === "login" ? "Sign in with Google" : "Sign up with Google"}
-              </span>
-            </button>
+            {/* Custom styled button with invisible GSI button overlaid on top */}
+            <div className="relative w-full h-[46px]">
+              {/* Visible design layer */}
+              <div className="absolute inset-0 flex items-center justify-center gap-3 border border-[#0a0a0a] bg-[#efe8d8] pointer-events-none">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.616z" fill="#4285F4"/>
+                  <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+                  <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                  <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                </svg>
+                <span className="mono text-[10px] uppercase tracking-widest text-[#0a0a0a]">
+                  {mode === "login" ? "Sign in with Google" : "Sign up with Google"}
+                </span>
+              </div>
+              {/* Real GSI button — invisible overlay, receives the actual click */}
+              <div ref={googleDivRef} className="absolute inset-0 opacity-0 overflow-hidden cursor-pointer" style={{ zIndex: 1 }} />
+            </div>
 
             <div className="flex items-center gap-3 mt-5">
               <div className="flex-1 h-px bg-[#0a0a0a]/20" />
