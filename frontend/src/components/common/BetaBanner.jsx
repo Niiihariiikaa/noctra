@@ -2,17 +2,10 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 
-const STORAGE_KEY = "noctra_beta_dismissed";
-
 export default function BetaBanner() {
-  const [visible, setVisible] = useState(() => {
-    try { return !localStorage.getItem(STORAGE_KEY); } catch { return true; }
-  });
+  const [visible, setVisible] = useState(true);
 
-  const dismiss = () => {
-    try { localStorage.setItem(STORAGE_KEY, "1"); } catch {}
-    setVisible(false);
-  };
+  const dismiss = () => setVisible(false);
 
   return (
     <AnimatePresence>
