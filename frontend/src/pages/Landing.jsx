@@ -234,24 +234,6 @@ function MarketingLanding({ heroRef, watermarkY, watermarkScale, creators, categ
       <Navbar />
       <Ticker />
 
-      {/* Simple create-account prompt at top */}
-      <motion.div
-        initial={{ opacity: 0, y: -6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.4 }}
-        className="fixed top-[34px] left-0 right-0 z-[45] flex justify-center pointer-events-none"
-      >
-        <div className="pointer-events-auto flex items-center gap-3 bg-[#0a0a0a] text-[#efe8d8] px-4 py-2 mx-4 mt-1.5 border border-[#0a0a0a] shadow-[3px_3px_0_0_#e63946]">
-          <Link to="/auth?mode=signup" className="mono text-[10px] uppercase tracking-widest font-bold bg-[#e63946] text-[#efe8d8] px-3 py-1 hover:opacity-80 transition whitespace-nowrap">
-            Create account — free
-          </Link>
-          <span className="text-[#efe8d8]/30 hidden sm:block">·</span>
-          <Link to="/auth" className="mono text-[10px] uppercase tracking-widest text-[#efe8d8]/60 hover:text-[#efe8d8] transition whitespace-nowrap hidden sm:block">
-            Sign in
-          </Link>
-        </div>
-      </motion.div>
-
       {/* HERO */}
       <Hero heroRef={heroRef} watermarkY={watermarkY} watermarkScale={watermarkScale} user={user} ctaSlot={
         <div className="flex flex-wrap gap-3">
