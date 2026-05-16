@@ -1,9 +1,9 @@
 ﻿import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Bookmark, MapPin, ArrowUpRight } from "lucide-react";
+import { Bookmark, MapPin, ArrowUpRight, Instagram } from "lucide-react";
 import TrustRing from "./TrustRing";
-import { formatFollowers, formatINR, trustBadge } from "../../lib/format";
+import { formatINR, trustBadge } from "../../lib/format";
 import { getAvatar } from "../../lib/avatar";
 
 export default function CreatorCard({ creator, onBookmark, index = 0 }) {
@@ -65,12 +65,22 @@ export default function CreatorCard({ creator, onBookmark, index = 0 }) {
         <div className="flex items-center gap-2 mt-1 mono text-[10px] uppercase tracking-[0.2em] text-[#5c5650]">
           <MapPin size={10} /> {creator.city}
           <span>·</span>
-          <span>{formatFollowers(creator.followers)}</span>
-          <span>·</span>
-          <span>{creator.engagement_rate}%</span>
+          <span>{creator.niche}</span>
         </div>
 
         <p className="text-sm text-[#0a0a0a]/85 mt-2 line-clamp-2 min-h-[2.5rem]">{creator.bio}</p>
+
+        {creator.instagram_handle && (
+          <a
+            href={`https://www.instagram.com/${creator.instagram_handle.replace("@", "")}/`}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1.5 mt-3 mono text-[9px] uppercase tracking-widest text-[#5c5650] hover:text-[#e63946] transition"
+          >
+            <Instagram size={10} /> {creator.instagram_handle}
+          </a>
+        )}
 
         <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#0a0a0a]/25">
           <div>
@@ -79,7 +89,7 @@ export default function CreatorCard({ creator, onBookmark, index = 0 }) {
           </div>
           <Link
             to={`/creators/${creator.id}`}
-            className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold uppercase tracking-widest border border-[#0a0a0a] hover:bg-[#e63946] hover:text-[#efe8d8] transition"
+            className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold uppercase tracking-widest border border-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-[#efe8d8] transition"
             data-testid={`view-profile-${creator.id}`}
           >
             View <ArrowUpRight size={12} />

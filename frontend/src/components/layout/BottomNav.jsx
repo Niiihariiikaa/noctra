@@ -37,8 +37,8 @@ export default function BottomNav() {
               }`}
               data-testid={`bottom-nav-${item.label.toLowerCase()}`}
             >
-              <Icon size={16} strokeWidth={2.2} />
-              <span className="text-[9px] font-semibold uppercase tracking-wider">{item.label}</span>
+              <Icon size={18} strokeWidth={2} />
+              <span className="text-[10px] font-semibold uppercase tracking-wider">{item.label}</span>
             </Link>
           );
         })}

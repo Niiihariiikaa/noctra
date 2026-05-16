@@ -1030,9 +1030,59 @@ async def phyllo_fetch_profile(
         raise HTTPException(502, "Failed to fetch profile from Phyllo")
 
 
-# ---------- Instagram (RapidAPI scraper) ----------
-RAPIDAPI_KEY  = os.environ.get("RAPIDAPI_KEY", "")
-RAPIDAPI_HOST = os.environ.get("RAPIDAPI_HOST", "instagram-scraper-stable-api.p.rapidapi.com")
+# ---------- Instagram ----------
+# NOTE: RapidAPI scraper logic commented out — re-enable when paid plan is active.
+#
+# RAPIDAPI_KEY  = os.environ.get("RAPIDAPI_KEY", "")
+# RAPIDAPI_HOST = os.environ.get("RAPIDAPI_HOST", "instagram-scraper-stable-api.p.rapidapi.com")
+#
+# _IG_HEADERS = lambda: {
+#     "x-rapidapi-key": RAPIDAPI_KEY,
+#     "x-rapidapi-host": RAPIDAPI_HOST,
+# }
+#
+# def _rapidapi_call(username: str) -> dict:
+#     """Fetch public profile from instagram-scraper-stable-api.p.rapidapi.com."""
+#     r = http.get(
+#         f"https://{RAPIDAPI_HOST}/ig_get_fb_profile_hover.php",
+#         params={"username_or_url": username},
+#         headers=_IG_HEADERS(),
+#         timeout=15,
+#     )
+#     logger.info(f"RapidAPI profile status {r.status_code} for @{username}")
+#     if not r.ok:
+#         logger.error(f"RapidAPI error: {r.text[:500]}")
+#         if r.status_code == 404:
+#             raise HTTPException(404, "Instagram account not found")
+#         if r.status_code == 429:
+#             raise HTTPException(429, "Rate limit reached — try again in a moment")
+#         raise HTTPException(502, f"Instagram API returned {r.status_code}")
+#     data = r.json()
+#     user = (
+#         data.get("user_data")
+#         or data.get("data", {}).get("user")
+#         or data.get("user")
+#         or data.get("data")
+#     )
+#     if not user or not isinstance(user, dict):
+#         logger.error(f"No user object in response: {str(data)[:400]}")
+#         raise HTTPException(404, "Instagram account not found")
+#     return user
+#
+# def _parse_rapidapi_user(user: dict, username: str) -> dict:
+#     hd_info = user.get("hd_profile_pic_url_info") or {}
+#     pic = (hd_info.get("url", "") if isinstance(hd_info, dict) else "") or user.get("profile_pic_url", "")
+#     return {
+#         "username": user.get("username", username),
+#         "full_name": user.get("full_name", ""),
+#         "profile_pic": pic,
+#         "followers": user.get("follower_count", 0),
+#         "following": user.get("following_count", 0),
+#         "posts": user.get("media_count", 0),
+#         "is_verified": user.get("is_verified", False),
+#         "is_private": user.get("is_private", False),
+#         "bio": user.get("biography", ""),
+#     }
 
 
 class InstagramFetchRequest(BaseModel):
@@ -1041,54 +1091,6 @@ class InstagramFetchRequest(BaseModel):
 
 class InstagramConfirmRequest(BaseModel):
     username: str
-
-
-def _rapidapi_call(username: str) -> dict:
-    """Shared helper — calls RapidAPI and returns the parsed user dict."""
-    r = http.get(
-        f"https://{RAPIDAPI_HOST}/ig_get_fb_profile_hover.php",
-        params={"username_or_url": username},
-        headers={
-            "x-rapidapi-key": RAPIDAPI_KEY,
-            "x-rapidapi-host": RAPIDAPI_HOST,
-        },
-        timeout=15,
-    )
-    logger.info(f"RapidAPI status {r.status_code} for @{username}")
-    if not r.ok:
-        logger.error(f"RapidAPI error body: {r.text[:500]}")
-        if r.status_code == 404:
-            raise HTTPException(404, "Instagram account not found")
-        if r.status_code == 429:
-            raise HTTPException(429, "Rate limit reached — try again in a moment")
-        raise HTTPException(502, f"Instagram API returned {r.status_code}")
-    data = r.json()
-    logger.info(f"RapidAPI response keys: {list(data.keys())}")
-    user = (
-        data.get("user_data")
-        or data.get("data", {}).get("user")
-        or data.get("user")
-    )
-    if not user:
-        logger.error(f"No user object in response: {str(data)[:300]}")
-        raise HTTPException(404, "Instagram account not found")
-    return user
-
-
-def _parse_rapidapi_user(user: dict, username: str) -> dict:
-    hd_info = user.get("hd_profile_pic_url_info") or {}
-    hd_pic = (hd_info.get("url", "") if isinstance(hd_info, dict) else "") or user.get("profile_pic_url", "")
-    return {
-        "username": user.get("username", username),
-        "full_name": user.get("full_name", ""),
-        "profile_pic": hd_pic,
-        "followers": user.get("follower_count", 0),
-        "following": user.get("following_count", 0),
-        "posts": user.get("media_count", 0),
-        "is_verified": user.get("is_verified", False),
-        "is_private": user.get("is_private", False),
-        "bio": user.get("biography", ""),
-    }
 
 
 @api_router.get("/instagram/pic")
@@ -1120,92 +1122,56 @@ async def instagram_pic_proxy(url: str = Query(...)):
 
 @api_router.post("/instagram/lookup")
 async def instagram_lookup(payload: InstagramFetchRequest):
-    """Public endpoint — just look up an Instagram profile, no auth needed."""
+    """Validate and return the username so the frontend can show a preview link."""
     username = payload.username.lstrip("@").strip()
     if not username:
         raise HTTPException(400, "Username is required")
-    if not RAPIDAPI_KEY:
-        raise HTTPException(503, "Instagram lookup not configured")
-    try:
-        user = _rapidapi_call(username)
-        return _parse_rapidapi_user(user, username)
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"RapidAPI unexpected error: {e}", exc_info=True)
-        raise HTTPException(502, "Failed to reach Instagram — try again")
+    # NOTE: API fetch disabled — just return the handle for direct linking
+    return {"username": username, "profile_url": f"https://www.instagram.com/{username}/"}
 
 
-def _rapidapi_media(endpoint: str, username: str, amount: int = 12) -> list:
-    """Fetch posts or reels for a username. Returns raw item list."""
-    try:
-        r = http.post(
-            f"https://{RAPIDAPI_HOST}/{endpoint}",
-            data={"username_or_url": username, "pagination_token": "", "amount": str(amount)},
-            headers={
-                "x-rapidapi-key": RAPIDAPI_KEY,
-                "x-rapidapi-host": RAPIDAPI_HOST,
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            timeout=15,
-        )
-        if not r.ok:
-            logger.warning(f"Media fetch {endpoint} returned {r.status_code} for @{username}")
-            return []
-        data = r.json()
-        items = (
-            data.get("data", {}).get("items")
-            or data.get("items")
-            or []
-        )
-        return items if isinstance(items, list) else []
-    except Exception as e:
-        logger.warning(f"Media fetch {endpoint} error for @{username}: {e}")
-        return []
-
-
-def _parse_media_item(item: dict, media_type: str) -> dict:
-    code = item.get("code") or item.get("shortcode") or ""
-    caption_raw = item.get("caption") or {}
-    caption = (caption_raw.get("text", "") if isinstance(caption_raw, dict) else str(caption_raw))[:200]
-    return {
-        "url": f"https://www.instagram.com/p/{code}/" if code else "",
-        "type": media_type,
-        "likes": item.get("like_count", 0) or 0,
-        "comments": item.get("comment_count", 0) or 0,
-        "caption": caption,
-        "timestamp": item.get("taken_at", 0),
-    }
-
-
-@api_router.get("/instagram/debug-media")
-async def debug_instagram_media(username: str):
-    """Dev-only: returns raw RapidAPI response for posts + reels so we can inspect the schema."""
-    posts_raw_full = []
-    reels_raw_full = []
-    try:
-        r = http.post(
-            f"https://{RAPIDAPI_HOST}/get_ig_user_posts.php",
-            data={"username_or_url": username, "pagination_token": "", "amount": "3"},
-            headers={"x-rapidapi-key": RAPIDAPI_KEY, "x-rapidapi-host": RAPIDAPI_HOST,
-                     "Content-Type": "application/x-www-form-urlencoded"},
-            timeout=15,
-        )
-        posts_raw_full = r.json()
-    except Exception as e:
-        posts_raw_full = {"error": str(e)}
-    try:
-        r = http.post(
-            f"https://{RAPIDAPI_HOST}/get_ig_user_reels.php",
-            data={"username_or_url": username, "pagination_token": "", "amount": "3"},
-            headers={"x-rapidapi-key": RAPIDAPI_KEY, "x-rapidapi-host": RAPIDAPI_HOST,
-                     "Content-Type": "application/x-www-form-urlencoded"},
-            timeout=15,
-        )
-        reels_raw_full = r.json()
-    except Exception as e:
-        reels_raw_full = {"error": str(e)}
-    return {"posts": posts_raw_full, "reels": reels_raw_full}
+# NOTE: Media fetch + debug endpoint commented out — re-enable with paid RapidAPI plan.
+#
+# def _rapidapi_media(endpoint: str, username: str, amount: int = 12) -> list:
+#     try:
+#         r = http.post(
+#             f"https://{RAPIDAPI_HOST}/{endpoint}",
+#             data={"username_or_url": username, "pagination_token": "", "amount": str(amount)},
+#             headers={**_IG_HEADERS(), "Content-Type": "application/x-www-form-urlencoded"},
+#             timeout=15,
+#         )
+#         if not r.ok:
+#             return []
+#         body = r.json()
+#         items = (
+#             body.get("data", {}).get("items")
+#             or body.get("data")
+#             or body.get("items")
+#             or []
+#         )
+#         return items if isinstance(items, list) else []
+#     except Exception as e:
+#         logger.warning(f"Media fetch /{endpoint} error for @{username}: {e}")
+#         return []
+#
+# def _parse_media_item(item: dict, media_type: str) -> dict:
+#     code = item.get("shortcode") or item.get("code") or ""
+#     caption_raw = item.get("caption") or ""
+#     caption = (caption_raw.get("text", "") if isinstance(caption_raw, dict) else str(caption_raw))[:200]
+#     return {
+#         "url": f"https://www.instagram.com/p/{code}/" if code else "",
+#         "type": media_type,
+#         "likes": item.get("likes", 0) or item.get("like_count", 0) or 0,
+#         "comments": item.get("comments", 0) or item.get("comment_count", 0) or 0,
+#         "views": item.get("video_views", 0) or 0,
+#         "caption": caption,
+#         "thumbnail": (item.get("thumbnail_resources") or [{}])[-1].get("src", "") or item.get("display_url", ""),
+#         "timestamp": item.get("taken_at_timestamp", "") or item.get("taken_at", ""),
+#     }
+#
+# @api_router.get("/instagram/debug-media")
+# async def debug_instagram_media(username: str):
+#     ...  # POST to get_ig_user_posts.php / get_ig_user_reels.php
 
 
 @api_router.post("/instagram/connect")
@@ -1213,7 +1179,7 @@ async def instagram_connect(
     payload: InstagramConfirmRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    """Creator confirms the looked-up profile is theirs; fetches profile + recent media and saves it."""
+    """Save creator's Instagram handle — insights fetch disabled until paid API plan is active."""
     if current_user.get("role") != "creator":
         raise HTTPException(403, "Only creators can connect Instagram")
 
@@ -1221,65 +1187,13 @@ async def instagram_connect(
     if not username:
         raise HTTPException(400, "Username is required")
 
-    if not RAPIDAPI_KEY:
-        raise HTTPException(503, "Instagram lookup not configured")
-
-    try:
-        user = _rapidapi_call(username)
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"RapidAPI connect error: {e}", exc_info=True)
-        raise HTTPException(502, "Failed to reach Instagram — try again")
-
-    parsed = _parse_rapidapi_user(user, username)
-    followers = parsed["followers"]
-    handle = parsed["username"]
-    cdn_url = parsed["profile_pic"]
-
-    # Fetch recent posts + reels for portfolio and avg stats
-    posts_raw = _rapidapi_media("get_ig_user_posts.php", handle, 6)
-    reels_raw = _rapidapi_media("get_ig_user_reels.php", handle, 6)
-
-    portfolio = (
-        [_parse_media_item(p, "post") for p in posts_raw if p.get("code") or p.get("shortcode")]
-        + [_parse_media_item(r, "reel") for r in reels_raw if r.get("code") or r.get("shortcode")]
-    )
-
-    # Derive avg_likes, avg_comments, engagement from real post data
-    all_likes = [p["likes"] for p in portfolio if p["likes"]]
-    all_comments = [p["comments"] for p in portfolio if p["comments"]]
-    avg_likes = int(sum(all_likes) / len(all_likes)) if all_likes else 0
-    avg_comments = int(sum(all_comments) / len(all_comments)) if all_comments else 0
-    engagement = round((avg_likes / followers) * 100, 2) if followers > 0 and avg_likes else 0.0
-
     updates = {
-        "instagram_handle": f"@{handle}",
-        "instagram_full_name": user.get("full_name", ""),
-        "instagram_pic": cdn_url,
+        "instagram_handle": f"@{username}",
         "instagram_verified": True,
-        "instagram_is_private": user.get("is_private", False),
-        "instagram_is_platform_verified": user.get("is_verified", False),
-        "followers": followers,
-        "following": user.get("following_count", 0),
-        "media_count": user.get("media_count", 0),
-        "instagram_bio": user.get("biography", ""),
     }
-    if portfolio:
-        updates["portfolio"] = portfolio
-    if avg_likes:
-        updates["avg_likes"] = avg_likes
-    if avg_comments:
-        updates["avg_comments"] = avg_comments
-    if engagement:
-        updates["engagement_rate"] = engagement
-
     await db.creators.update_one({"user_id": current_user["id"]}, {"$set": updates})
     updated = await db.creators.find_one({"user_id": current_user["id"]}, {"_id": 0})
-    logger.info(
-        f"Instagram connected for {current_user['id']}: @{handle} "
-        f"({followers} followers, {len(portfolio)} media items)"
-    )
+    logger.info(f"Instagram handle saved for {current_user['id']}: @{username}")
     return updated
 
 

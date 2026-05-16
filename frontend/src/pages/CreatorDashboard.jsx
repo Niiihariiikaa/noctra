@@ -1,16 +1,15 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Loader2, TrendingUp, Inbox, CheckCircle2, Star, Camera } from "lucide-react";
+import { Loader2, TrendingUp, Inbox, CheckCircle2, Star, Camera, ArrowUpRight } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import BottomNav from "../components/layout/BottomNav";
 import TrustRing from "../components/common/TrustRing";
-import ConnectInstagram from "../components/common/ConnectInstagram";
 import { getDeals, updateDeal, getCreator, getCampaigns, getDealRooms, deleteAccount, uploadAvatar } from "../lib/api";
 import { getUser, signOut } from "../lib/auth";
-import { formatINR, formatFollowers } from "../lib/format";
+import { formatINR } from "../lib/format";
 import { getAvatar } from "../lib/avatar";
 
 const STATUSES = ["Requested", "Negotiating", "Confirmed", "Live", "Completed", "Rejected"];
@@ -129,24 +128,31 @@ export default function CreatorDashboard() {
         </div>
 
         {creator && (
-          <div className="mt-6 space-y-3">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-              <Mini label="Followers"  v={formatFollowers(creator.followers)} />
-              <Mini label="Engagement" v={`${creator.engagement_rate}%`} />
-              <Mini label="Niche"      v={creator.niche || "—"} />
-              {creator.instagram_verified && (
-                <ConnectInstagram
-                  creator={creator}
-                  onUpdated={(updated) => setCreator(updated)}
-                />
-              )}
-            </div>
-            {!creator.instagram_verified && (
-              <ConnectInstagram
-                creator={creator}
-                onUpdated={(updated) => setCreator(updated)}
-              />
+          <div className="mt-8 space-y-4">
+            {creator.instagram_handle ? (
+              <a
+                href={`https://www.instagram.com/${creator.instagram_handle.replace("@", "")}/`}
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-center justify-between border border-[#0a0a0a] px-6 py-5 hover:bg-[#0a0a0a] hover:text-[#efe8d8] transition-colors"
+              >
+                <div>
+                  <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#5c5650] group-hover:text-[#efe8d8]/50 mb-1">Instagram</div>
+                  <div className="display text-3xl md:text-4xl font-black">{creator.instagram_handle}</div>
+                </div>
+                <ArrowUpRight size={28} className="text-[#e63946] group-hover:text-[#efe8d8] shrink-0" />
+              </a>
+            ) : (
+              <div className="border border-dashed border-[#0a0a0a] px-6 py-5">
+                <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#5c5650] mb-1">Instagram</div>
+                <div className="display text-3xl md:text-4xl font-black text-[#5c5650]">Not linked yet</div>
+              </div>
             )}
+            <div className="border border-[#0a0a0a] px-6 py-8 text-center">
+              <div className="mono text-[9px] uppercase tracking-[0.4em] text-[#5c5650] mb-3">Creator Insights</div>
+              <div className="display text-4xl md:text-5xl font-black text-[#e63946]">Coming soon.</div>
+              <p className="text-sm text-[#5c5650] mt-3">Follower counts, engagement rates & content analytics</p>
+            </div>
           </div>
         )}
       </section>

@@ -25,6 +25,7 @@ import Contact from "@/pages/Contact";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
 import Careers from "@/pages/Careers";
+import GetStarted from "@/pages/GetStarted";
 
 function App() {
   return (
@@ -63,6 +64,7 @@ function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/careers" element={<Careers />} />
+          <Route path="/get-started" element={<GetStarted />} />
         </Routes>
       </BrowserRouter>
       <Toaster

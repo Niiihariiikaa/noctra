@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -43,9 +43,7 @@ export default function VerifyEmail() {
   const onKeyDown = (i, e) => {
     if (e.key === "Backspace") {
       if (digits[i]) {
-        const next = [...digits];
-        next[i] = "";
-        setDigits(next);
+        const next = [...digits]; next[i] = ""; setDigits(next);
       } else if (i > 0) {
         inputs.current[i - 1]?.focus();
       }
@@ -101,90 +99,104 @@ export default function VerifyEmail() {
   };
 
   return (
-    <div className="min-h-screen bg-[#efe8d8] flex items-center justify-center px-5 pb-24">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm"
-      >
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-black mb-2 text-[#0a0a0a]">Check your inbox</h1>
-          <p className="text-sm text-[#5c5650] leading-relaxed">
+    <div className="min-h-screen bg-[#efe8d8] text-[#0a0a0a] flex flex-col">
+      {/* Top bar */}
+      <div className="border-b border-[#0a0a0a] px-5 md:px-10 py-4 flex items-center justify-between">
+        <Link to="/">
+          <img src="/brand/logo.svg" alt="Noctra" className="h-8 w-auto" />
+        </Link>
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#0a0a0a]/40">
+          Email verification
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 flex items-center justify-center px-5 py-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
+          className="w-full max-w-md"
+        >
+          {/* Label */}
+          <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-4">
+            § Step — Confirm your email
+          </div>
+
+          {/* Heading */}
+          <h1 className="display text-5xl md:text-6xl font-black leading-[0.9] mb-4">
+            Check your<br /><span className="italic">inbox.</span>
+          </h1>
+          <p className="text-sm text-[#0a0a0a]/55 leading-relaxed mb-10">
             We sent a 6-digit code to{" "}
-            <span className="font-semibold text-[#0a0a0a]">{email}</span>
+            <span className="font-semibold text-[#0a0a0a]">{email}</span>.
+            <br />Enter it below to verify your account.
           </p>
-        </div>
 
-        {/* OTP form */}
-        <form onSubmit={onSubmit}>
-          {/* Digit boxes */}
-          <div className="flex gap-2 mb-6" onPaste={onPaste}>
-            {digits.map((d, i) => (
-              <input
-                key={i}
-                ref={(el) => (inputs.current[i] = el)}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={d}
-                onChange={(e) => onDigit(i, e.target.value)}
-                onKeyDown={(e) => onKeyDown(i, e)}
-                className={`
-                  flex-1 h-14 text-center text-2xl font-black border-2 transition-all focus:outline-none
-                  ${d
-                    ? "border-[#0a0a0a] bg-[#0a0a0a] text-[#efe8d8]"
-                    : "border-[#0a0a0a]/40 bg-transparent text-[#0a0a0a] focus:border-[#c94f3d] focus:bg-[#e8e0cd]"
-                  }
-                `}
+          <form onSubmit={onSubmit}>
+            {/* OTP inputs */}
+            <div className="flex gap-2 sm:gap-3 mb-4" onPaste={onPaste}>
+              {digits.map((d, i) => (
+                <input
+                  key={i}
+                  ref={(el) => (inputs.current[i] = el)}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={d}
+                  onChange={(e) => onDigit(i, e.target.value)}
+                  onKeyDown={(e) => onKeyDown(i, e)}
+                  className={`
+                    flex-1 min-w-0 h-14 sm:h-16 text-center text-xl sm:text-2xl font-black border-2 transition-all focus:outline-none
+                    ${d
+                      ? "border-[#0a0a0a] bg-[#0a0a0a] text-[#efe8d8]"
+                      : "border-[#0a0a0a]/25 bg-transparent text-[#0a0a0a] focus:border-[#0a0a0a]"
+                    }
+                  `}
+                />
+              ))}
+            </div>
+
+            {/* Progress track */}
+            <div className="h-[2px] bg-[#0a0a0a]/10 mb-8 overflow-hidden">
+              <motion.div
+                className="h-full bg-[#0a0a0a]"
+                animate={{ width: `${(filled / 6) * 100}%` }}
+                transition={{ duration: 0.15 }}
               />
-            ))}
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={submitting || filled < 6}
+              className="w-full py-4 bg-[#0a0a0a] text-[#efe8d8] mono text-[10px] uppercase tracking-widest hover:bg-[#e63946] disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            >
+              {submitting
+                ? <><Loader2 size={13} className="animate-spin" /> Verifying…</>
+                : "Verify email →"
+              }
+            </button>
+          </form>
+
+          {/* Resend + back */}
+          <div className="mt-6 flex items-center justify-between">
+            <button
+              onClick={() => navigate("/auth")}
+              className="mono text-[10px] uppercase tracking-widest text-[#0a0a0a]/40 hover:text-[#0a0a0a] transition"
+            >
+              ← Back
+            </button>
+            <button
+              onClick={onResend}
+              disabled={countdown > 0 || resending}
+              className="mono text-[10px] uppercase tracking-widest text-[#0a0a0a] hover:text-[#e63946] disabled:text-[#0a0a0a]/30 disabled:cursor-not-allowed transition"
+            >
+              {resending ? "Sending…" : countdown > 0 ? `Resend in ${countdown}s` : "Resend code →"}
+            </button>
           </div>
-
-          {/* Progress bar */}
-          <div className="h-[3px] bg-[#0a0a0a]/10 mb-6 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-[#c94f3d] rounded-full"
-              animate={{ width: `${(filled / 6) * 100}%` }}
-              transition={{ duration: 0.15 }}
-            />
-          </div>
-
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={submitting || filled < 6}
-            className="w-full py-3.5 bg-[#0a0a0a] text-[#efe8d8] font-semibold text-sm hover:bg-[#c94f3d] disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-          >
-            {submitting
-              ? <><Loader2 size={14} className="animate-spin" /> Verifying…</>
-              : "Verify email →"
-            }
-          </button>
-        </form>
-
-        {/* Resend + back */}
-        <div className="mt-5 flex items-center justify-between">
-          <button
-            onClick={() => navigate("/auth")}
-            className="text-sm text-[#5c5650] hover:text-[#0a0a0a] transition-colors"
-          >
-            ← Back
-          </button>
-          <button
-            onClick={onResend}
-            disabled={countdown > 0 || resending}
-            className="text-sm font-medium text-[#0a0a0a] hover:text-[#c94f3d] disabled:text-[#9a9490] disabled:cursor-not-allowed transition-colors"
-          >
-            {resending
-              ? "Sending…"
-              : countdown > 0
-                ? `Resend in ${countdown}s`
-                : "Resend code →"
-            }
-          </button>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }

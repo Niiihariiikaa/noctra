@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowUpRight, MapPin, Star, Instagram, Heart, MessageCircle, Play, Loader2 } from "lucide-react";
+import { ArrowUpRight, MapPin, Star, Instagram, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
@@ -10,7 +10,7 @@ import TrustRing from "../components/common/TrustRing";
 import { getCreator, getBrands, createDeal } from "../lib/api";
 import { getAvatar } from "../lib/avatar";
 import { getUser } from "../lib/auth";
-import { formatINR, formatFollowers, trustBadge } from "../lib/format";
+import { formatINR, trustBadge } from "../lib/format";
 
 const DELIVERABLES = [
   { key: "story", label: "Story", multiplier: 1 },
@@ -121,82 +121,41 @@ export default function CreatorProfile() {
       <section className="max-w-7xl mx-auto px-5 md:px-10 py-12 grid md:grid-cols-[1fr_320px] gap-10">
         {/* Main */}
         <div>
-          <div className="flex items-center gap-3 flex-wrap mb-6">
+          {/* Avatar + bio + badge */}
+          <div className="flex items-center gap-3 flex-wrap mb-8">
             <img
               src={getAvatar(creator)}
               alt=""
               className="w-16 h-16 rounded-full object-cover border border-[#0a0a0a] bg-[#e8e0cd]"
             />
             <div className="flex-1">
-              <a href={`https://instagram.com/${creator.instagram_handle?.replace("@", "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 mono text-xs hover:text-[#e63946]">
-                <Instagram size={12} /> {creator.instagram_handle}
-              </a>
-              <p className="text-[#0a0a0a]/80 mt-1 text-sm md:text-base">{creator.bio}</p>
+              <p className="text-[#0a0a0a]/80 text-sm md:text-base">{creator.bio}</p>
             </div>
             <span className="px-2.5 py-1 mono text-[9px] uppercase tracking-widest border border-[#0a0a0a] bg-[#0a0a0a] text-[#efe8d8]">{badge.label}</span>
           </div>
 
-          {/* Stats grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 border-t border-l border-[#0a0a0a]">
-            <Stat label="Followers" value={formatFollowers(creator.followers)} />
-            <Stat label="Engagement" value={`${creator.engagement_rate}%`} />
-            <Stat label="Avg Likes" value={formatFollowers(creator.avg_likes)} />
-            <Stat label="Avg Comments" value={formatFollowers(creator.avg_comments || 0)} />
-          </div>
+          {/* Instagram — big redirect link */}
+          {creator.instagram_handle ? (
+            <a
+              href={`https://www.instagram.com/${creator.instagram_handle.replace("@", "")}/`}
+              target="_blank"
+              rel="noreferrer"
+              className="group flex items-center justify-between border border-[#0a0a0a] px-6 py-5 mb-4 hover:bg-[#0a0a0a] hover:text-[#efe8d8] transition-colors"
+            >
+              <div>
+                <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#5c5650] group-hover:text-[#efe8d8]/50 mb-1">Instagram</div>
+                <div className="display text-3xl md:text-4xl font-black">{creator.instagram_handle}</div>
+              </div>
+              <ArrowUpRight size={28} className="text-[#e63946] group-hover:text-[#efe8d8] shrink-0" />
+            </a>
+          ) : null}
 
-          {/* Portfolio */}
-          {creator.portfolio?.length > 0 && (
-            <div className="mt-10">
-              <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-4">
-                {creator.instagram_verified ? "Recent Content" : "Portfolio"}
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {creator.portfolio.map((p, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.04 }}
-                    data-testid={`portfolio-${i}`}
-                  >
-                    {p.type ? (
-                      /* Instagram-synced item — stats card */
-                      <a
-                        href={p.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block border border-[#0a0a0a] group hover:shadow-[4px_4px_0_0_#0a0a0a] transition-shadow"
-                      >
-                        <div className={`aspect-square flex flex-col items-center justify-center gap-3 ${p.type === "reel" ? "bg-[#0a0a0a]" : "bg-[#e8e0cd]"}`}>
-                          {p.type === "reel" && <Play size={28} className="text-[#efe8d8] opacity-60" />}
-                          <div className={`flex items-center gap-4 mono text-xs font-bold ${p.type === "reel" ? "text-[#efe8d8]" : "text-[#0a0a0a]"}`}>
-                            <span className="flex items-center gap-1"><Heart size={12} /> {p.likes?.toLocaleString()}</span>
-                            <span className="flex items-center gap-1"><MessageCircle size={12} /> {p.comments?.toLocaleString()}</span>
-                          </div>
-                        </div>
-                        <div className="px-3 py-2 border-t border-[#0a0a0a] text-xs flex items-center justify-between gap-2">
-                          <span className="mono text-[9px] uppercase tracking-widest text-[#5c5650]">{p.type}</span>
-                          <span className="text-[#0a0a0a]/80 truncate text-right">{p.caption?.slice(0, 40) || "View post"}</span>
-                        </div>
-                      </a>
-                    ) : (
-                      /* Manually added item — image card */
-                      <div className="border border-[#0a0a0a] overflow-hidden group">
-                        <div className="aspect-square overflow-hidden">
-                          <img src={p.thumb} alt="" className="w-full h-full object-cover group-hover:scale-105 transition" />
-                        </div>
-                        <div className="px-3 py-2 border-t border-[#0a0a0a] text-xs flex justify-between">
-                          <span className="font-medium truncate">{p.campaign}</span>
-                          <span className="text-[#5c5650] truncate ml-2">{p.brand}</span>
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Creator insights coming soon */}
+          <div className="border border-[#0a0a0a] px-6 py-8 text-center mb-2">
+            <div className="mono text-[9px] uppercase tracking-[0.4em] text-[#5c5650] mb-3">Creator Insights</div>
+            <div className="display text-4xl md:text-5xl font-black text-[#e63946]">Coming soon.</div>
+            <p className="text-sm text-[#5c5650] mt-3">Follower counts, engagement rates & content analytics</p>
+          </div>
 
           {/* Reviews */}
           <div className="mt-12">

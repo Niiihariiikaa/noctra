@@ -217,15 +217,16 @@ code, .mono { font-family: 'Space Mono', monospace; }
 }
 
 /* Word-mask scroll reveal */
-.reveal-mask { display: inline-block; overflow: hidden; vertical-align: top; }
+.reveal-mask { display: inline-block; overflow: hidden; vertical-align: top; padding-left: 4px; margin-left: -4px; padding-right: 4px; }
 .reveal-mask > span { display: inline-block; will-change: transform; }
 
 /* Mobile polish — smaller hero on tight screens */
 @media (max-width: 640px) {
     .display { letter-spacing: -0.03em; }
     .vertical-text { font-size: 9px; letter-spacing: 0.15em; }
-    .ticker-track { padding-left: 90px !important; }
 }
+
+html, body { overflow-x: hidden; }
 
 @layer base {
     [data-debug-wrapper="true"] { display: contents !important; }
