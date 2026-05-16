@@ -25,7 +25,8 @@ export async function register({ name, email, password, role, instagram_username
   if (niche) body.niche = niche;
   if (industry) body.industry = industry;
   const { data } = await api.post("/auth/register", body);
-  saveSession(data.access_token, data.user);
+  // Do NOT save session here — user must verify email first.
+  // Session is saved in VerifyEmail.jsx after OTP is confirmed.
   return data.user;
 }
 

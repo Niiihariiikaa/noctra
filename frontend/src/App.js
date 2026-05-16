@@ -3,6 +3,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { initAuth } from "@/lib/auth";
 import { ScrollReset, ScrollToTopButton } from "@/components/common/ScrollToTop";
+import BetaBanner from "@/components/common/BetaBanner";
 
 initAuth();
 import { Toaster } from "sonner";
@@ -33,6 +34,7 @@ function App() {
       <BrowserRouter>
         <ScrollReset />
         <ScrollToTopButton />
+        <BetaBanner />
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/discover" element={<Discover />} />
