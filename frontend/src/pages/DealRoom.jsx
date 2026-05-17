@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
@@ -13,9 +13,11 @@ const STATUS_STEPS = ["Matched", "Content Submitted", "Under Review", "Approved"
 
 export default function DealRoom() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const user = getUser();
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [contentLink, setContentLink] = useState("");
   const [revisionNote, setRevisionNote] = useState("");
   const [postUrl, setPostUrl] = useState("");
@@ -24,14 +26,30 @@ export default function DealRoom() {
   useEffect(() => { load(); }, [id]); // eslint-disable-line
 
   async function load() {
+    if (!user) {
+      navigate(`/auth?mode=login`);
+      return;
+    }
     setLoading(true);
+    setError(null);
     try {
       const r = await getDealRoom(id);
       setRoom(r);
       if (r.content_link) setContentLink(r.content_link);
       if (r.instagram_post_url) setPostUrl(r.instagram_post_url);
-    } catch {
-      toast.error("Deal room not found or access denied");
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 401) {
+        navigate(`/auth?mode=login`);
+        return;
+      }
+      if (status === 403) {
+        setError("You don't have access to this deal room.");
+      } else if (status === 404) {
+        setError("Deal room not found. It may have been deleted.");
+      } else {
+        setError("Something went wrong loading this deal room.");
+      }
     } finally {
       setLoading(false);
     }
@@ -64,6 +82,20 @@ export default function DealRoom() {
   if (loading) return (
     <div className="min-h-screen bg-[#efe8d8] flex items-center justify-center">
       <Loader2 className="animate-spin text-[#e63946]" size={32} />
+    </div>
+  );
+
+  if (error) return (
+    <div className="min-h-screen bg-[#efe8d8] text-[#0a0a0a]">
+      <Navbar />
+      <div className="max-w-2xl mx-auto px-5 md:px-10 py-24 text-center">
+        <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#e63946] mb-4">Deal Room</div>
+        <div className="display text-5xl font-black mb-6">Oops.</div>
+        <p className="text-sm text-[#5c5650] mb-8">{error}</p>
+        <Link to={user?.role === "brand" ? "/dashboard/brand" : "/dashboard/creator"} className="inline-flex items-center gap-2 mono text-[10px] uppercase tracking-widest bg-[#0a0a0a] text-[#efe8d8] px-5 py-3 hover:bg-[#e63946] transition">
+          <ArrowLeft size={12} /> Back to dashboard
+        </Link>
+      </div>
     </div>
   );
 

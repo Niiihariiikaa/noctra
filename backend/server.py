@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Depends, BackgroundTasks
 from fastapi.responses import StreamingResponse
 import urllib.parse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -16,6 +16,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 import hmac
 import hashlib
+import asyncio
 
 import razorpay
 import requests as http
@@ -49,6 +50,12 @@ if RZP_KEY_ID and RZP_KEY_SECRET:
 # ---------- Resend (email) ----------
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 RESEND_FROM    = os.environ.get("RESEND_FROM", "Noctra <onboarding@resend.dev>")
+FRONTEND_URL   = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
+# ---------- Apify (Instagram scraping) ----------
+APIFY_TOKEN = os.environ.get("APIFY_TOKEN", "")
+APIFY_ACTOR = "apify~instagram-scraper"           # posts/details scraper (slow)
+APIFY_ACTOR_PROFILE = "dSCLg0C3YEZ83HzYX"         # fast profile scraper (~10s)
 
 def send_otp_email(to_email: str, otp: str) -> bool:
     if not RESEND_API_KEY:
@@ -75,6 +82,308 @@ def send_otp_email(to_email: str, otp: str) -> bool:
     except Exception as e:
         logger.error(f"Resend error: {e}")
         return False
+
+
+def _send_email_sync(to_email: str, subject: str, html: str):
+    """Blocking Resend call — always run this in a thread, never directly in async."""
+    try:
+        import resend as _resend
+        _resend.api_key = RESEND_API_KEY
+        result = _resend.Emails.send({"from": RESEND_FROM, "to": [to_email], "subject": subject, "html": html})
+        logger.info(f"[EMAIL] Sent to {to_email}: {subject} → {result}")
+    except Exception as e:
+        logger.error(f"[EMAIL] Resend error sending to {to_email}: {e}")
+
+
+def _build_email_html(headline: str, body_html: str, cta_label: str, full_cta_url: str) -> str:
+    cta_block = (
+        f"""<a href="{full_cta_url}" style="display:inline-block;margin-top:24px;padding:14px 28px;"""
+        f"""background:#0a0a0a;color:#efe8d8;text-decoration:none;font-size:11px;font-weight:700;"""
+        f"""letter-spacing:0.2em;text-transform:uppercase">{cta_label} →</a>"""
+        if cta_label and full_cta_url else ""
+    )
+    return f"""
+<div style="font-family:monospace;max-width:520px;margin:0 auto;background:#efe8d8;color:#0a0a0a">
+  <div style="background:#0a0a0a;padding:20px 28px">
+    <span style="font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:#e63946">§ Noctra</span>
+  </div>
+  <div style="padding:40px 28px">
+    <h1 style="font-size:32px;font-weight:900;margin:0 0 16px;line-height:1.1">{headline}</h1>
+    {body_html}
+    {cta_block}
+  </div>
+  <div style="border-top:1px solid #0a0a0a;padding:16px 28px">
+    <p style="font-size:10px;color:#7a7466;margin:0;letter-spacing:0.15em;text-transform:uppercase">Built in India · Noctra v0.1 · 2026</p>
+  </div>
+</div>"""
+
+
+async def send_platform_email(to_email: str, subject: str, headline: str, body_html: str, cta_label: str = "", cta_path: str = ""):
+    """Send a branded Noctra email. cta_path is a frontend path like /deal-room/123."""
+    if not RESEND_API_KEY:
+        logger.info(f"[EMAIL] No key — would send to {to_email}: {subject}")
+        return
+    full_cta_url = f"{FRONTEND_URL}{cta_path}" if cta_path else ""
+    html = _build_email_html(headline, body_html, cta_label, full_cta_url)
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, _send_email_sync, to_email, subject, html)
+
+
+async def create_notification(user_id: str, title: str, body: str, link: str = "", notif_type: str = "info"):
+    notif = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "title": title,
+        "body": body,
+        "link": link,
+        "type": notif_type,
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.notifications.insert_one(notif)
+
+
+# ---------- Trust Score ----------
+def _trust_tier(score: int) -> str:
+    if score >= 81: return "top"
+    if score >= 61: return "gold"
+    if score >= 41: return "silver"
+    if score >= 21: return "bronze"
+    return "unverified"
+
+
+def _compute_trust_score(profile: dict, posts: list, creator: dict) -> dict:
+    score = 0.0
+    breakdown = {}
+    now = datetime.now(timezone.utc)
+
+    # 1. Engagement rate (0–40 pts)
+    followers = profile.get("followersCount") or creator.get("followers") or 0
+    avg_likes = avg_comments = 0
+    eng_score = 0.0
+    if followers > 0 and posts:
+        valid = [p for p in posts if p.get("likesCount") is not None]
+        if valid:
+            avg_likes = round(sum(p.get("likesCount", 0) or 0 for p in valid) / len(valid))
+            avg_comments = round(sum(p.get("commentsCount", 0) or 0 for p in valid) / len(valid))
+            er = (avg_likes + avg_comments) / followers * 100
+            eng_score = round(min(er / 10, 1.0) * 40, 1)
+    score += eng_score
+    breakdown["engagement"] = eng_score
+
+    # 2. Follower authenticity (0–20 pts)
+    following = profile.get("followsCount") or 0
+    auth_score = 0.0
+    if following > 0 and followers > 0:
+        auth_score = round(min((followers / following) / 10, 1.0) * 20, 1)
+    elif followers > 0:
+        auth_score = 20.0
+    score += auth_score
+    breakdown["authenticity"] = auth_score
+
+    # 3. Posting activity last 30 days (0–15 pts)
+    recent_count = 0
+    for p in posts:
+        ts = p.get("timestamp")
+        if ts:
+            try:
+                if (now - datetime.fromisoformat(ts.replace("Z", "+00:00"))).days <= 30:
+                    recent_count += 1
+            except Exception:
+                pass
+    activity_score = round(min(recent_count / 8, 1.0) * 15, 1)
+    score += activity_score
+    breakdown["activity"] = activity_score
+
+    # 4. Noctra profile completeness (0–15 pts)
+    comp = 0.0
+    if creator.get("bio"): comp += 3
+    if creator.get("niche"): comp += 3
+    if creator.get("city"): comp += 3
+    pricing = creator.get("pricing") or {}
+    if any(pricing.get(k) for k in ["story", "post", "reel"]): comp += 3
+    if creator.get("instagram_handle"): comp += 3
+    score += comp
+    breakdown["completeness"] = comp
+
+    # 5. Verified badge (0–10 pts)
+    verified_score = 10.0 if profile.get("verified") else 0.0
+    score += verified_score
+    breakdown["verified"] = verified_score
+
+    # Build per-post chart data (last 12 posts, chronological order)
+    sorted_posts = sorted(posts, key=lambda x: x.get("timestamp", ""), reverse=True)[:12]
+    posts_chart = []
+    for p in reversed(sorted_posts):
+        ts = p.get("timestamp", "")
+        try:
+            d = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            label = d.strftime("%b %d")
+        except Exception:
+            label = "–"
+        posts_chart.append({
+            "likes": p.get("likesCount", 0) or 0,
+            "comments": p.get("commentsCount", 0) or 0,
+            "label": label,
+        })
+
+    total = round(min(score, 100))
+    return {
+        "trust_score": total,
+        "trust_tier": _trust_tier(total),
+        "trust_breakdown": breakdown,
+        "instagram_stats": {
+            "followers": followers,
+            "following": following,
+            "posts_count": profile.get("postsCount") or profile.get("posts_count") or 0,
+            "verified": bool(profile.get("verified")),
+            "avg_likes": avg_likes,
+            "avg_comments": avg_comments,
+            "recent_posts_30d": recent_count,
+            "posts_chart": posts_chart,
+        },
+        "trust_score_updated_at": now.isoformat(),
+        "trust_score_computing": False,
+    }
+
+
+async def _apify_run(input_data: dict, actor: str = None) -> list:
+    """Start an Apify run, poll until done, return dataset items."""
+    if not APIFY_TOKEN:
+        return []
+    actor = actor or APIFY_ACTOR
+    loop = asyncio.get_event_loop()
+
+    def _start():
+        r = http.post(
+            f"https://api.apify.com/v2/acts/{actor}/runs",
+            params={"token": APIFY_TOKEN},
+            json=input_data,
+            timeout=30,
+        )
+        r.raise_for_status()
+        return r.json()["data"]
+
+    try:
+        run = await loop.run_in_executor(None, _start)
+    except Exception as e:
+        logger.error(f"Apify start run failed: {e}")
+        return []
+
+    run_id, dataset_id = run["id"], run["defaultDatasetId"]
+
+    status = "RUNNING"
+    for _ in range(30):  # poll up to 90 seconds
+        await asyncio.sleep(3)
+        def _check(rid=run_id):
+            r = http.get(
+                f"https://api.apify.com/v2/actor-runs/{rid}",
+                params={"token": APIFY_TOKEN},
+                timeout=10,
+            )
+            return r.json()["data"]["status"]
+        try:
+            status = await loop.run_in_executor(None, _check)
+        except Exception:
+            continue
+        if status in ("SUCCEEDED", "FAILED", "ABORTED", "TIMED-OUT"):
+            break
+
+    if status != "SUCCEEDED":
+        logger.error(f"Apify run {run_id} ended: {status}")
+        return []
+
+    def _fetch(did=dataset_id):
+        r = http.get(
+            f"https://api.apify.com/v2/datasets/{did}/items",
+            params={"token": APIFY_TOKEN, "limit": 25},
+            timeout=30,
+        )
+        return r.json()
+
+    try:
+        return await loop.run_in_executor(None, _fetch)
+    except Exception as e:
+        logger.error(f"Apify fetch items failed: {e}")
+        return []
+
+
+async def scrape_and_update_trust_score(creator_id: str, instagram_handle: str):
+    """Background task: fast profile actor → profile + latestPosts → compute score."""
+    handle = instagram_handle.lstrip("@").strip()
+    logger.info(f"Trust score scrape starting for @{handle}")
+    try:
+        items = await _apify_run(
+            {"usernames": [handle], "includeAboutSection": True},
+            actor=APIFY_ACTOR_PROFILE,
+        )
+        profile = items[0] if items else {}
+        posts = profile.get("latestPosts") or []
+        creator = await db.creators.find_one({"id": creator_id}, {"_id": 0})
+        if not creator:
+            return
+        result = _compute_trust_score(profile, posts, creator)
+        await db.creators.update_one({"id": creator_id}, {"$set": result})
+        await _save_instagram_avatar(creator_id, profile)
+        logger.info(f"Trust score for @{handle}: {result['trust_score']} ({result['trust_tier']})")
+    except Exception as e:
+        logger.error(f"Trust score update failed for {creator_id}: {e}")
+        await db.creators.update_one(
+            {"id": creator_id},
+            {"$set": {"trust_score_computing": False, "trust_score_updated_at": datetime.now(timezone.utc).isoformat()}},
+        )
+
+
+async def _save_instagram_avatar(entity_id: str, profile: dict, collection=None):
+    """Download Instagram profile picture and store as base64 data-URL avatar."""
+    col = collection or db.creators
+    pic_url = profile.get("profilePicUrlHD") or profile.get("profilePicUrl") or ""
+    if not pic_url:
+        return
+    loop = asyncio.get_event_loop()
+    try:
+        def _dl():
+            import base64 as _b64
+            r = http.get(pic_url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+            r.raise_for_status()
+            ct = r.headers.get("content-type", "image/jpeg").split(";")[0]
+            return f"data:{ct};base64,{_b64.b64encode(r.content).decode()}"
+        data_url = await loop.run_in_executor(None, _dl)
+        await col.update_one({"id": entity_id}, {"$set": {"avatar": data_url}})
+        logger.info(f"Instagram avatar saved for {entity_id}")
+    except Exception as e:
+        logger.error(f"Avatar download failed for {entity_id}: {e}")
+
+
+async def _fetch_quick_instagram_stats(entity_id: str, handle: str, collection=None):
+    """Background: fetch basic profile stats + avatar. Works for both creators and brands."""
+    col = collection or db.creators
+    clean = handle.lstrip("@").strip()
+    if not clean or not APIFY_TOKEN:
+        return
+    try:
+        items = await _apify_run(
+            {"usernames": [clean], "includeAboutSection": True},
+            actor=APIFY_ACTOR_PROFILE,
+        )
+        if not items:
+            return
+        p = items[0]
+        existing = await col.find_one({"id": entity_id}, {"_id": 0, "instagram_stats": 1})
+        existing_stats = (existing or {}).get("instagram_stats") or {}
+        quick_stats = {
+            **existing_stats,
+            "followers": p.get("followersCount", 0) or 0,
+            "following": p.get("followsCount", 0) or 0,
+            "posts_count": p.get("postsCount", 0) or 0,
+            "verified": bool(p.get("verified", False)),
+            "bio": p.get("biography", ""),
+        }
+        await col.update_one({"id": entity_id}, {"$set": {"instagram_stats": quick_stats}})
+        await _save_instagram_avatar(entity_id, p, collection=col)
+        logger.info(f"Quick stats saved for @{clean}: {quick_stats['followers']} followers")
+    except Exception as e:
+        logger.error(f"Quick stats fetch failed for {entity_id}: {e}")
 
 
 # ---------- Google OAuth ----------
@@ -351,6 +660,8 @@ async def login(payload: UserLogin):
     user = await db.users.find_one({"email": payload.email})
     if not user or not pwd_context.verify(payload.password, user.get("password_hash", "")):
         raise HTTPException(401, "Invalid email or password")
+    if not user.get("email_verified"):
+        raise HTTPException(403, "Please verify your email — check your inbox for the code")
     user_out = {k: v for k, v in user.items() if k not in ("password_hash", "_id")}
     token = create_access_token({"sub": user["id"], "email": user["email"], "role": user["role"]})
     return {"access_token": token, "token_type": "bearer", "user": user_out}
@@ -531,6 +842,38 @@ async def get_creator(creator_id: str):
     return creator
 
 
+@api_router.post("/creators/{creator_id}/refresh-trust-score")
+async def refresh_trust_score(creator_id: str, current_user: dict = Depends(get_current_user)):
+    creator = await db.creators.find_one({"id": creator_id}, {"_id": 0})
+    if not creator:
+        raise HTTPException(404, "Creator not found")
+    if current_user["id"] != creator_id:
+        raise HTTPException(403, "Access denied")
+    if not APIFY_TOKEN:
+        raise HTTPException(503, "Instagram scraping not configured")
+    handle = (creator.get("instagram_handle") or "").lstrip("@").strip()
+    if not handle:
+        raise HTTPException(400, "Add your Instagram handle in Edit Profile first")
+    if creator.get("trust_score_computing"):
+        raise HTTPException(429, "Already computing — check back in a minute")
+    last = creator.get("trust_score_updated_at")
+    if last:
+        try:
+            hours = (datetime.now(timezone.utc) - datetime.fromisoformat(last)).total_seconds() / 3600
+            if hours < 24:
+                raise HTTPException(429, f"Refreshed {int(hours)}h ago — try again in {24 - int(hours)}h")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+    await db.creators.update_one(
+        {"id": creator_id},
+        {"$set": {"trust_score_computing": True, "trust_score_updated_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    asyncio.create_task(scrape_and_update_trust_score(creator_id, handle))
+    return {"status": "computing", "message": "Computing your trust score — check back in ~2 minutes."}
+
+
 @api_router.get("/editors")
 async def get_editors(
     role: Optional[str] = Query(None),
@@ -705,6 +1048,8 @@ async def onboard_creator(payload: OnboardingCreator, current_user: dict = Depen
     updates["onboarding_complete"] = True
     await db.users.update_one({"id": current_user["id"]}, {"$set": updates})
     await db.creators.update_one({"user_id": current_user["id"]}, {"$set": updates})
+    if updates.get("instagram_handle"):
+        asyncio.create_task(_fetch_quick_instagram_stats(current_user["id"], updates["instagram_handle"]))
     user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "password_hash": 0})
     return user
 
@@ -719,6 +1064,59 @@ async def onboard_brand(payload: OnboardingBrand, current_user: dict = Depends(g
     await db.brands.update_one({"user_id": current_user["id"]}, {"$set": updates})
     user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "password_hash": 0})
     return user
+
+
+# ---------- Profile updates ----------
+class CreatorProfileUpdate(BaseModel):
+    bio: Optional[str] = None
+    city: Optional[str] = None
+    niche: Optional[str] = None
+    instagram_handle: Optional[str] = None
+    pricing_story: Optional[int] = None
+    pricing_post: Optional[int] = None
+    pricing_reel: Optional[int] = None
+
+
+class BrandProfileUpdate(BaseModel):
+    description: Optional[str] = None
+    industry: Optional[str] = None
+    website: Optional[str] = None
+    instagram: Optional[str] = None
+    tagline: Optional[str] = None
+
+
+@api_router.patch("/profile/creator")
+async def update_creator_profile(payload: CreatorProfileUpdate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "creator":
+        raise HTTPException(403, "Only creators can update creator profiles")
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    pricing_updates = {}
+    if "pricing_story" in updates:
+        pricing_updates["pricing.story"] = updates.pop("pricing_story")
+    if "pricing_post" in updates:
+        pricing_updates["pricing.post"] = updates.pop("pricing_post")
+    if "pricing_reel" in updates:
+        pricing_updates["pricing.reel"] = updates.pop("pricing_reel")
+    all_updates = {**updates, **pricing_updates}
+    if all_updates:
+        await db.creators.update_one({"user_id": current_user["id"]}, {"$set": all_updates})
+    if payload.instagram_handle:
+        asyncio.create_task(_fetch_quick_instagram_stats(current_user["id"], payload.instagram_handle))
+    creator = await db.creators.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    return creator
+
+
+@api_router.patch("/profile/brand")
+async def update_brand_profile(payload: BrandProfileUpdate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "brand":
+        raise HTTPException(403, "Only brands can update brand profiles")
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if updates:
+        await db.brands.update_one({"user_id": current_user["id"]}, {"$set": updates})
+    if payload.instagram:
+        asyncio.create_task(_fetch_quick_instagram_stats(current_user["id"], payload.instagram, collection=db.brands))
+    brand = await db.brands.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    return brand
 
 
 # ---------- Campaigns ----------
@@ -811,6 +1209,39 @@ async def apply_to_campaign(payload: ApplicationCreate, current_user: dict = Dep
     }
     await db.applications.insert_one(dict(application))
     await db.campaigns.update_one({"id": payload.campaign_id}, {"$inc": {"applicant_count": 1}})
+
+    # Email + notification → brand
+    brand_user = await db.users.find_one({"id": application["brand_id"]}, {"_id": 0})
+    if brand_user:
+        instagram_handle = (application.get("creator_instagram") or "").lstrip("@")
+        instagram_line = (
+            f"""<p style="margin:0 0 8px"><a href="https://www.instagram.com/{instagram_handle}/" style="color:#e63946;font-size:14px">@{instagram_handle} on Instagram →</a></p>"""
+            if instagram_handle else ""
+        )
+        noctra_profile_line = f"""<p style="margin:0 0 8px"><a href="{FRONTEND_URL}/creators/{application['creator_id']}" style="color:#e63946;font-size:14px">View profile on Noctra →</a></p>"""
+        pitch_line = (
+            f"""<p style="font-size:14px;color:#5c5650;margin:16px 0 0;border-left:3px solid #e63946;padding-left:12px"><em>"{application['pitch_note']}"</em></p>"""
+            if application.get("pitch_note") else ""
+        )
+        await send_platform_email(
+            brand_user["email"],
+            f"New application — {current_user['name']} applied to {campaign['name']}",
+            f"{current_user['name']} wants to collaborate.",
+            f"""<p style="font-size:14px;color:#5c5650;margin:0 0 8px">Campaign: <strong style="color:#0a0a0a">{campaign['name']}</strong></p>
+<p style="font-size:14px;color:#5c5650;margin:0 0 16px">Niche: <strong style="color:#0a0a0a">{application['creator_niche']}</strong></p>
+{noctra_profile_line}
+{instagram_line}
+{pitch_line}""",
+            "Review application", f"/campaigns/{payload.campaign_id}",
+        )
+        await create_notification(
+            brand_user["id"],
+            f"{current_user['name']} applied to your campaign",
+            f"New applicant for '{campaign['name']}' · {application['creator_niche']}",
+            f"/campaigns/{payload.campaign_id}",
+            "application",
+        )
+
     application.pop("_id", None)
     return application
 
@@ -870,11 +1301,51 @@ async def review_application(application_id: str, payload: ApplicationReview, cu
             "status": "Matched",
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
-        await db.deal_rooms.insert_one(dict(deal_room))
-        deal_room.pop("_id", None)
+        room_id = deal_room["id"]
+        await db.deal_rooms.insert_one(deal_room)
+        # Re-fetch from DB to get the clean doc (avoids any Motor mutation of the dict)
+        deal_room = await db.deal_rooms.find_one({"id": room_id}, {"_id": 0})
+
+        # Email + notification → creator
+        creator_user = await db.users.find_one({"id": app["creator_id"]}, {"_id": 0})
+        if creator_user:
+            await send_platform_email(
+                creator_user["email"],
+                f"You got accepted! — {app['campaign_name']}",
+                "You're in.",
+                f"""<p style="font-size:14px;color:#5c5650;margin:0 0 8px"><strong style="color:#0a0a0a">{app['brand_name']}</strong> accepted you for '{app['campaign_name']}'.</p>
+<p style="font-size:14px;color:#5c5650;margin:0">Head to your deal room to review the brief and get started.</p>""",
+                "Open deal room", f"/deal-room/{room_id}",
+            )
+            await create_notification(
+                creator_user["id"],
+                f"{app['brand_name']} accepted your application!",
+                f"You're in for '{app['campaign_name']}' — open your deal room to get started.",
+                f"/deal-room/{room_id}",
+                "accepted",
+            )
 
     app_out = await db.applications.find_one({"id": application_id}, {"_id": 0})
     return {"application": app_out, "deal_room": deal_room}
+
+
+# ---------- Notifications ----------
+@api_router.get("/notifications")
+async def get_notifications(current_user: dict = Depends(get_current_user)):
+    items = await db.notifications.find({"user_id": current_user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    return items
+
+
+@api_router.patch("/notifications/read-all")
+async def mark_all_read(current_user: dict = Depends(get_current_user)):
+    await db.notifications.update_many({"user_id": current_user["id"]}, {"$set": {"read": True}})
+    return {"ok": True}
+
+
+@api_router.patch("/notifications/{notif_id}/read")
+async def mark_notification_read(notif_id: str, current_user: dict = Depends(get_current_user)):
+    await db.notifications.update_one({"id": notif_id, "user_id": current_user["id"]}, {"$set": {"read": True}})
+    return {"ok": True}
 
 
 # ---------- Deal Rooms ----------
@@ -904,6 +1375,26 @@ async def submit_content(room_id: str, payload: ContentSubmit, current_user: dic
         {"id": room_id},
         {"$set": {"content_link": payload.content_link, "status": "Content Submitted", "submitted_at": datetime.now(timezone.utc).isoformat()}}
     )
+
+    # Email + notification → brand
+    brand_user = await db.users.find_one({"id": room["brand_id"]}, {"_id": 0})
+    if brand_user:
+        await send_platform_email(
+            brand_user["email"],
+            f"Content ready for review — {room['campaign_name']}",
+            "Content submitted.",
+            f"""<p style="font-size:14px;color:#5c5650;margin:0 0 8px"><strong style="color:#0a0a0a">{room['creator_name']}</strong> submitted content for '{room['campaign_name']}'.</p>
+<p style="font-size:14px;color:#5c5650;margin:0">Review it in your deal room and approve or request changes.</p>""",
+            "Review content", f"/deal-room/{room_id}",
+        )
+        await create_notification(
+            brand_user["id"],
+            f"{room['creator_name']} submitted content",
+            f"Ready for review on '{room['campaign_name']}' — approve or request changes.",
+            f"/deal-room/{room_id}",
+            "content",
+        )
+
     return await db.deal_rooms.find_one({"id": room_id}, {"_id": 0})
 
 
@@ -914,6 +1405,23 @@ async def review_content(room_id: str, payload: RevisionRequest, current_user: d
         raise HTTPException(403, "Not your deal room")
     if payload.note.lower() == "approve":
         await db.deal_rooms.update_one({"id": room_id}, {"$set": {"status": "Approved"}})
+        creator_user = await db.users.find_one({"id": room["creator_id"]}, {"_id": 0})
+        if creator_user:
+            await send_platform_email(
+                creator_user["email"],
+                f"Content approved! — {room['campaign_name']}",
+                "Your content is approved.",
+                f"""<p style="font-size:14px;color:#5c5650;margin:0 0 8px"><strong style="color:#0a0a0a">{room['brand_name']}</strong> approved your content for '{room['campaign_name']}'.</p>
+<p style="font-size:14px;color:#5c5650;margin:0">Post it on Instagram and paste the live link in your deal room.</p>""",
+                "Open deal room", f"/deal-room/{room_id}",
+            )
+            await create_notification(
+                creator_user["id"],
+                "Content approved!",
+                f"{room['brand_name']} approved your content — post it and share the live link.",
+                f"/deal-room/{room_id}",
+                "approved",
+            )
     else:
         if room.get("revision_count", 0) >= 2:
             await db.deal_rooms.update_one({"id": room_id}, {"$set": {"status": "Flagged — Admin Review"}})
@@ -923,6 +1431,25 @@ async def review_content(room_id: str, payload: RevisionRequest, current_user: d
                 {"id": room_id},
                 {"$set": {"status": "Under Review"}, "$push": {"revisions": revision}, "$inc": {"revision_count": 1}}
             )
+            creator_user = await db.users.find_one({"id": room["creator_id"]}, {"_id": 0})
+            if creator_user:
+                count = room.get("revision_count", 0) + 1
+                await send_platform_email(
+                    creator_user["email"],
+                    f"Revision requested ({count}/2) — {room['campaign_name']}",
+                    "Revision requested.",
+                    f"""<p style="font-size:14px;color:#5c5650;margin:0 0 8px">Campaign: <strong style="color:#0a0a0a">{room['campaign_name']}</strong></p>
+<p style="font-size:14px;color:#5c5650;margin:0 0 8px">Feedback: <em>{payload.note}</em></p>
+<p style="font-size:14px;color:#5c5650;margin:0">Revise and resubmit via your deal room. ({count}/2 revisions used)</p>""",
+                    "Open deal room", f"/deal-room/{room_id}",
+                )
+                await create_notification(
+                    creator_user["id"],
+                    f"Revision requested ({count}/2)",
+                    f"{room['brand_name']}: {payload.note[:80]}{'…' if len(payload.note) > 80 else ''}",
+                    f"/deal-room/{room_id}",
+                    "revision",
+                )
     return await db.deal_rooms.find_one({"id": room_id}, {"_id": 0})
 
 
@@ -937,6 +1464,11 @@ async def update_deal_room_status(room_id: str, payload: DealRoomStatusUpdate, c
     if payload.instagram_post_url:
         updates["instagram_post_url"] = payload.instagram_post_url
     await db.deal_rooms.update_one({"id": room_id}, {"$set": updates})
+    if payload.status == "Completed":
+        creator_doc = await db.creators.find_one({"id": room["creator_id"]}, {"_id": 0})
+        handle = (creator_doc or {}).get("instagram_handle", "")
+        if handle and APIFY_TOKEN:
+            asyncio.create_task(scrape_and_update_trust_score(room["creator_id"], handle))
     return await db.deal_rooms.find_one({"id": room_id}, {"_id": 0})
 
 

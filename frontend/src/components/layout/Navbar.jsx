@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { getUser, signOut } from "../../lib/auth";
+import NotificationPanel from "../common/NotificationPanel";
 
 export default function Navbar() {
   const location = useLocation();
@@ -33,59 +34,66 @@ export default function Navbar() {
         </Link>
       </div>
 
-      {/* Pill nav — fixed, screen-centered, below ticker bar */}
+      {/* Pill nav — fixed, screen-centered */}
       <div className="hidden lg:flex fixed top-12 left-0 right-0 z-50 justify-center pointer-events-none">
-      <motion.nav
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className={`pointer-events-auto flex items-center gap-1 px-3 py-2.5 rounded-full border border-[#0a0a0a] bg-[#efe8d8] transition ${scrolled ? "shadow-[4px_4px_0_0_#0a0a0a]" : ""}`}
-        data-testid="main-navbar"
-      >
-        {navItems.map((item) => {
-          const active = location.pathname === item.to;
-          return (
+        <motion.nav
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className={`pointer-events-auto flex items-center gap-1 px-3 py-2.5 rounded-full border border-[#0a0a0a] bg-[#efe8d8] transition ${scrolled ? "shadow-[4px_4px_0_0_#0a0a0a]" : ""}`}
+          data-testid="main-navbar"
+        >
+          {navItems.map((item) => {
+            const active = location.pathname === item.to;
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                  active ? "bg-[#e63946] text-[#efe8d8]" : "text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-[#efe8d8]"
+                }`}
+                data-testid={`nav-${item.label.toLowerCase()}`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+          <div className="w-px h-5 bg-[#0a0a0a]/20 mx-1" />
+          {user ? (
+            <>
+              <Link
+                to={user.role === "brand" ? "/dashboard/brand" : "/dashboard/creator"}
+                className="px-4 py-2 rounded-full text-sm font-medium text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-[#efe8d8] transition"
+                data-testid="dashboard-link"
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={() => { signOut(); navigate("/"); }}
+                className="px-4 py-2 rounded-full text-sm font-medium bg-[#0a0a0a] text-[#efe8d8] hover:bg-[#e63946] transition"
+                data-testid="sign-out-btn"
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
             <Link
-              key={item.to}
-              to={item.to}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                active ? "bg-[#e63946] text-[#efe8d8]" : "text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-[#efe8d8]"
-              }`}
-              data-testid={`nav-${item.label.toLowerCase()}`}
+              to="/auth"
+              className="px-4 py-2 rounded-full text-sm font-bold bg-[#0a0a0a] text-[#efe8d8] hover:bg-[#e63946] transition"
+              data-testid="sign-in-btn"
             >
-              {item.label}
+              Sign in
             </Link>
-          );
-        })}
-        <div className="w-px h-5 bg-[#0a0a0a]/20 mx-1" />
-        {user ? (
-          <>
-            <Link
-              to={user.role === "brand" ? "/dashboard/brand" : "/dashboard/creator"}
-              className="px-4 py-2 rounded-full text-sm font-medium text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-[#efe8d8] transition"
-              data-testid="dashboard-link"
-            >
-              Dashboard
-            </Link>
-            <button
-              onClick={() => { signOut(); navigate("/"); }}
-              className="px-4 py-2 rounded-full text-sm font-medium bg-[#0a0a0a] text-[#efe8d8] hover:bg-[#e63946] transition"
-              data-testid="sign-out-btn"
-            >
-              Sign out
-            </button>
-          </>
-        ) : (
-          <Link
-            to="/auth"
-            className="px-4 py-2 rounded-full text-sm font-bold bg-[#0a0a0a] text-[#efe8d8] hover:bg-[#e63946] transition"
-            data-testid="sign-in-btn"
-          >
-            Sign in
-          </Link>
-        )}
-      </motion.nav>
+          )}
+        </motion.nav>
       </div>
+
+      {/* Notification bell — desktop, fixed top-right (only when logged in) */}
+      {user && (
+        <div className="hidden lg:block fixed top-[42px] right-5 z-50">
+          <NotificationPanel />
+        </div>
+      )}
     </>
   );
 }

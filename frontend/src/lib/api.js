@@ -57,6 +57,18 @@ export const verifyOTP  = (email, otp) => api.post("/auth/verify-otp", { email, 
 // Careers
 export const submitCareersApplication = (data) => api.post("/careers/apply", data).then(r => r.data);
 
+// Profile updates
+export const updateCreatorProfile = (data) => api.patch("/profile/creator", data).then(r => r.data);
+export const updateBrandProfile   = (data) => api.patch("/profile/brand", data).then(r => r.data);
+
+// Notifications
+export const getNotifications        = () => api.get("/notifications").then(r => r.data);
+export const markNotificationRead    = (id) => api.patch(`/notifications/${id}/read`).then(r => r.data);
+export const markAllNotificationsRead = () => api.patch("/notifications/read-all").then(r => r.data);
+
+// Trust Score
+export const refreshTrustScore = (creatorId) => api.post(`/creators/${creatorId}/refresh-trust-score`).then(r => r.data);
+
 // Deal Rooms
 export const getDealRooms       = () => api.get("/deal-rooms").then(r => r.data);
 export const getDealRoom        = (id) => api.get(`/deal-rooms/${id}`).then(r => r.data);

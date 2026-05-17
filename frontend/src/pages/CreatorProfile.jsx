@@ -1,12 +1,13 @@
 ﻿import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowUpRight, MapPin, Star, Instagram, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowUpRight, MapPin, Star, Instagram, Loader2, Info, X } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import BottomNav from "../components/layout/BottomNav";
 import TrustRing from "../components/common/TrustRing";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { getCreator, getBrands, createDeal } from "../lib/api";
 import { getAvatar } from "../lib/avatar";
 import { getUser } from "../lib/auth";
@@ -150,12 +151,8 @@ export default function CreatorProfile() {
             </a>
           ) : null}
 
-          {/* Creator insights coming soon */}
-          <div className="border border-[#0a0a0a] px-6 py-8 text-center mb-2">
-            <div className="mono text-[9px] uppercase tracking-[0.4em] text-[#5c5650] mb-3">Creator Insights</div>
-            <div className="display text-4xl md:text-5xl font-black text-[#e63946]">Coming soon.</div>
-            <p className="text-sm text-[#5c5650] mt-3">Follower counts, engagement rates & content analytics</p>
-          </div>
+          {/* Creator Insights panel */}
+          <CreatorInsights creator={creator} />
 
           {/* Reviews */}
           <div className="mt-12">
@@ -262,5 +259,219 @@ function Stat({ label, value }) {
       <div className="mono text-[10px] uppercase tracking-[0.3em] text-[#5c5650] mb-1">{label}</div>
       <div className="display text-3xl md:text-4xl font-black">{value}</div>
     </div>
+  );
+}
+
+const TIER_STYLE = {
+  top:        { label: "Top Creator", bg: "#e63946", text: "#efe8d8" },
+  gold:       { label: "Gold",        bg: "#f4c542", text: "#0a0a0a" },
+  silver:     { label: "Silver",      bg: "#0a0a0a", text: "#efe8d8" },
+  bronze:     { label: "Bronze",      bg: "#7a7466", text: "#efe8d8" },
+  unverified: { label: "Unverified",  bg: "#e8e0cd", text: "#5c5650" },
+};
+
+const BREAKDOWN_META = [
+  { key: "engagement",   label: "Engagement rate",  max: 40 },
+  { key: "authenticity", label: "Follower quality",  max: 20 },
+  { key: "activity",     label: "Posting activity",  max: 15 },
+  { key: "completeness", label: "Profile complete",  max: 15 },
+  { key: "verified",     label: "Verified badge",    max: 10 },
+];
+
+const BREAKDOWN_DESC = {
+  engagement:   "Avg (likes + comments) / followers × 100",
+  authenticity: "Followers-to-following ratio — high = real audience",
+  activity:     "Posts in last 30 days (max 8+)",
+  completeness: "Bio, niche, city, pricing & Instagram handle",
+  verified:     "Instagram blue-tick verification",
+};
+
+function ScoreInfoModal({ onClose }) {
+  return (
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0a0a]/60 backdrop-blur-sm px-4"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+      >
+        <motion.div
+          className="bg-[#efe8d8] border border-[#0a0a0a] w-full max-w-md p-6 relative"
+          initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button onClick={onClose} className="absolute top-4 right-4 hover:text-[#e63946] transition-colors"><X size={16} /></button>
+          <div className="mono text-[9px] uppercase tracking-[0.4em] text-[#e63946] mb-1">How it works</div>
+          <div className="display text-2xl font-black mb-4">Trust Score</div>
+          <p className="text-sm text-[#5c5650] mb-5">Calculated from live Instagram data. Updated automatically after each completed deal.</p>
+          <div className="space-y-3">
+            {BREAKDOWN_META.map(({ label, max, key }) => (
+              <div key={key} className="border border-[#0a0a0a]/20 p-3">
+                <div className="flex justify-between mono text-[9px] uppercase tracking-widest mb-1">
+                  <span className="font-bold text-[#0a0a0a]">{label}</span>
+                  <span className="text-[#e63946]">{max} pts</span>
+                </div>
+                <div className="text-xs text-[#5c5650]">{BREAKDOWN_DESC[key]}</div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+const ChartTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-[#0a0a0a] text-[#efe8d8] px-3 py-2 mono text-[9px] uppercase tracking-widest">
+      <div className="mb-0.5">{label}</div>
+      <div>Likes: <span className="text-[#e63946] font-bold">{payload[0]?.value?.toLocaleString("en-IN")}</span></div>
+      {payload[1] && <div>Comments: <span className="font-bold">{payload[1]?.value?.toLocaleString("en-IN")}</span></div>}
+    </div>
+  );
+};
+
+function CreatorInsights({ creator }) {
+  const [showInfo, setShowInfo] = useState(false);
+  const stats = creator?.instagram_stats;
+  const breakdown = creator?.trust_breakdown;
+  const tier = TIER_STYLE[creator?.trust_tier] || TIER_STYLE.unverified;
+  const hasScore = creator?.trust_score > 0 || !!breakdown;
+  const chart = stats?.posts_chart || [];
+
+  if (!stats && !hasScore) {
+    return (
+      <div className="border border-[#0a0a0a] px-6 py-8 text-center mb-4">
+        <div className="mono text-[9px] uppercase tracking-[0.4em] text-[#5c5650] mb-2">Creator Insights</div>
+        <div className="text-sm text-[#5c5650]">This creator hasn't connected their Instagram yet.</div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {showInfo && <ScoreInfoModal onClose={() => setShowInfo(false)} />}
+      <div className="border border-[#0a0a0a] mb-4">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#0a0a0a] bg-[#0a0a0a] text-[#efe8d8]">
+          <div>
+            <div className="mono text-[9px] uppercase tracking-[0.4em] text-[#efe8d8]/50 mb-0.5">Creator Insights</div>
+            <div className="display text-xl font-black">Instagram Analytics</div>
+          </div>
+          <div className="flex items-center gap-2">
+            {hasScore && (
+              <span className="mono text-[9px] uppercase tracking-widest px-3 py-1" style={{ background: tier.bg, color: tier.text }}>
+                {tier.label}
+              </span>
+            )}
+            <button onClick={() => setShowInfo(true)} className="text-[#efe8d8]/50 hover:text-[#efe8d8] transition-colors" title="How trust score is calculated">
+              <Info size={15} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Basic stats */}
+          {stats && (
+            <div>
+              <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#5c5650] mb-3">Profile</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  ["Followers",   stats.followers != null ? Number(stats.followers).toLocaleString("en-IN") : "—"],
+                  ["Following",   stats.following != null ? Number(stats.following).toLocaleString("en-IN") : "—"],
+                  ["Total Posts", stats.posts_count != null ? Number(stats.posts_count).toLocaleString("en-IN") : "—"],
+                  ["Verified",    stats.verified ? "✓ Yes" : "No"],
+                ].map(([label, value]) => (
+                  <div key={label} className="border border-[#0a0a0a] px-4 py-3">
+                    <div className="mono text-[8px] uppercase tracking-widest text-[#5c5650] mb-1">{label}</div>
+                    <div className="font-black text-lg">{value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Engagement stats */}
+          {hasScore && stats && (
+            <div>
+              <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#5c5650] mb-3">Engagement</div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  ["Avg likes",    stats.avg_likes != null ? Number(stats.avg_likes).toLocaleString("en-IN") : "—"],
+                  ["Avg comments", stats.avg_comments != null ? Number(stats.avg_comments).toLocaleString("en-IN") : "—"],
+                  ["Posts / 30d",  stats.recent_posts_30d ?? "—"],
+                ].map(([label, value]) => (
+                  <div key={label} className="border border-[#0a0a0a]/40 px-3 py-2">
+                    <div className="mono text-[8px] uppercase tracking-widest text-[#5c5650] mb-0.5">{label}</div>
+                    <div className="font-bold text-base">{value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Trust score + breakdown */}
+          {hasScore && (
+            <div className="flex items-center gap-5 border border-[#0a0a0a] p-5">
+              <TrustRing score={creator?.trust_score || 0} size={72} stroke={5} />
+              <div className="flex-1 min-w-0">
+                <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#5c5650] mb-1">Trust Score</div>
+                <div className="display text-4xl font-black">{creator.trust_score}<span className="text-lg font-normal text-[#5c5650]">/100</span></div>
+              </div>
+            </div>
+          )}
+
+          {/* Breakdown bars */}
+          {breakdown && (
+            <div>
+              <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#5c5650] mb-3">Score Breakdown</div>
+              <div className="space-y-2.5">
+                {BREAKDOWN_META.map(({ key, label, max }) => {
+                  const val = breakdown[key] || 0;
+                  return (
+                    <div key={key}>
+                      <div className="flex justify-between mono text-[9px] uppercase tracking-widest text-[#5c5650] mb-1">
+                        <span>{label}</span>
+                        <span className="text-[#0a0a0a] font-bold">{val}/{max}</span>
+                      </div>
+                      <div className="h-1.5 bg-[#0a0a0a]/10 w-full">
+                        <motion.div
+                          className="h-full bg-[#e63946]"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${(val / max) * 100}%` }}
+                          transition={{ duration: 0.8, ease: "easeOut" }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Likes per post chart */}
+          {chart.length > 0 && (
+            <div>
+              <div className="mono text-[9px] uppercase tracking-[0.3em] text-[#5c5650] mb-3">Likes per post (recent)</div>
+              <div className="border border-[#0a0a0a]/20 p-3">
+                <ResponsiveContainer width="100%" height={130}>
+                  <BarChart data={chart} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                    <XAxis dataKey="label" tick={{ fontSize: 8, fontFamily: "monospace", fill: "#5c5650" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 8, fontFamily: "monospace", fill: "#5c5650" }} axisLine={false} tickLine={false} />
+                    <Tooltip content={<ChartTooltip />} cursor={{ fill: "#0a0a0a0d" }} />
+                    <Bar dataKey="likes" fill="#e63946" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="comments" fill="#0a0a0a" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="flex items-center gap-4 mt-2 mono text-[8px] uppercase tracking-widest text-[#5c5650]">
+                  <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 bg-[#e63946]" /> Likes</span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 bg-[#0a0a0a]" /> Comments</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }

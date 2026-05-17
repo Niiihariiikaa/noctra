@@ -159,7 +159,14 @@ export default function Auth() {
       }
       redirect(user.role);
     } catch (err) {
-      toast.error(err?.response?.data?.detail || "Something went wrong");
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      if (status === 403) {
+        toast.error("Please verify your email first");
+        navigate(`/verify-email?email=${encodeURIComponent(email)}&role=${role || "creator"}`);
+        return;
+      }
+      toast.error(detail || "Something went wrong");
     } finally {
       setSubmitting(false);
     }
