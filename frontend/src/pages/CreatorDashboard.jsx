@@ -8,7 +8,7 @@ import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import BottomNav from "../components/layout/BottomNav";
 import TrustRing from "../components/common/TrustRing";
-import { getDeals, updateDeal, getCreator, getCampaigns, getDealRooms, deleteAccount, uploadAvatar, updateCreatorProfile, refreshTrustScore } from "../lib/api";
+import { getDeals, updateDeal, getCreator, getCampaigns, getDealRooms, deleteAccount, uploadAvatar, updateCreatorProfile, refreshTrustScore, changePassword } from "../lib/api";
 import { getUser, signOut } from "../lib/auth";
 import { formatINR } from "../lib/format";
 import { getAvatar } from "../lib/avatar";
@@ -299,6 +299,7 @@ export default function CreatorDashboard() {
         )}
       </section>
 
+      <ChangePasswordSection />
       <DeleteZone />
       <Footer />
       <BottomNav />
@@ -591,6 +592,74 @@ function TrustScorePanel({ creator, onUpdated }) {
         )}
       </div>
     </>
+  );
+}
+
+function ChangePasswordSection() {
+  const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const reset = () => { setCurrent(""); setNext(""); setConfirm(""); setOpen(false); };
+
+  const save = async () => {
+    if (!current || !next || !confirm) return toast.error("Fill in all fields");
+    if (next.length < 8) return toast.error("New password must be at least 8 characters");
+    if (next !== confirm) return toast.error("Passwords don't match");
+    setSaving(true);
+    try {
+      await changePassword(current, next);
+      toast.success("Password updated");
+      reset();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Failed to update password");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="max-w-7xl mx-auto px-5 md:px-10 pb-6">
+      <div className="border-t border-[#0a0a0a]/25 pt-6 mt-2">
+        <div className="mono text-[9px] uppercase tracking-widest text-[#5c5650] mb-2">Password</div>
+        {!open ? (
+          <button onClick={() => setOpen(true)} className="mono text-[10px] uppercase tracking-widest text-[#5c5650] hover:text-[#0a0a0a] transition-colors">
+            Change password →
+          </button>
+        ) : (
+          <div className="flex flex-col gap-3 max-w-sm">
+            <input
+              type="password" placeholder="Current password" value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+              className="border border-[#0a0a0a] px-4 py-2.5 text-sm bg-transparent focus:outline-none"
+            />
+            <input
+              type="password" placeholder="New password (min 8 chars)" value={next}
+              onChange={(e) => setNext(e.target.value)}
+              className="border border-[#0a0a0a] px-4 py-2.5 text-sm bg-transparent focus:outline-none"
+            />
+            <input
+              type="password" placeholder="Confirm new password" value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              className="border border-[#0a0a0a] px-4 py-2.5 text-sm bg-transparent focus:outline-none"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={save} disabled={saving}
+                className="mono text-[10px] uppercase tracking-widest px-4 py-2 bg-[#0a0a0a] text-[#efe8d8] hover:bg-[#e63946] disabled:opacity-50 transition-colors"
+              >
+                {saving ? "Saving…" : "Update password"}
+              </button>
+              <button onClick={reset} className="mono text-[10px] uppercase tracking-widest text-[#5c5650] hover:text-[#0a0a0a]">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 

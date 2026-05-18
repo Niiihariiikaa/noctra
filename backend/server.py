@@ -604,19 +604,24 @@ async def register(payload: UserCreate):
     user["onboarding_complete"] = False
     user["email_verified"] = False
 
-    await db.users.insert_one(dict(user))
+    try:
+        await db.users.insert_one(dict(user))
+    except Exception as e:
+        logger.error(f"User insert failed for {payload.email}: {e}")
+        raise HTTPException(500, "Account creation failed — please try again")
 
-    # Send OTP immediately after registration
+    # Fire OTP email in background so it never blocks the response
     otp = "".join(random.choices(string.digits, k=6))
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
     await db.otps.delete_many({"email": payload.email})
     await db.otps.insert_one({"email": payload.email, "otp": otp, "expires_at": expires_at})
-    send_otp_email(payload.email, otp)
+    loop = asyncio.get_event_loop()
+    asyncio.create_task(loop.run_in_executor(None, send_otp_email, payload.email, otp))
 
-    # Auto-create a profile in the matching collection so they show up on the platform
+    # Auto-create profile — use upsert so a retry after partial failure doesn't crash
     if payload.role == "creator":
         handle = (payload.instagram_username or "").lstrip("@")
-        await db.creators.insert_one({
+        profile = {
             "id": user_id,
             "user_id": user_id,
             "name": payload.name,
@@ -636,9 +641,14 @@ async def register(payload: UserCreate):
             "brands_worked_with": [],
             "instagram_handle": f"@{handle}" if handle else "",
             "created_at": now,
-        })
+        }
+        try:
+            await db.creators.update_one({"id": user_id}, {"$setOnInsert": profile}, upsert=True)
+        except Exception as e:
+            logger.error(f"Creator profile create failed for {user_id}: {e}")
     elif payload.role == "brand":
-        await db.brands.insert_one({
+        initial = (payload.name[0].upper() if payload.name and payload.name.strip() else "B")
+        brand_profile = {
             "id": user_id,
             "user_id": user_id,
             "name": payload.name,
@@ -646,9 +656,13 @@ async def register(payload: UserCreate):
             "budget_range": "",
             "tagline": "",
             "logo_color": "#00d4c8",
-            "logo_initial": payload.name[0].upper() if payload.name else "B",
+            "logo_initial": initial,
             "created_at": now,
-        })
+        }
+        try:
+            await db.brands.update_one({"id": user_id}, {"$setOnInsert": brand_profile}, upsert=True)
+        except Exception as e:
+            logger.error(f"Brand profile create failed for {user_id}: {e}")
 
     user_out = {k: v for k, v in user.items() if k not in ("password_hash", "_id")}
     token = create_access_token({"sub": user_id, "email": user["email"], "role": user["role"]})
@@ -670,6 +684,27 @@ async def login(payload: UserLogin):
 @api_router.get("/auth/me")
 async def me(current_user: dict = Depends(get_current_user)):
     return current_user
+
+
+class ChangePassword(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@api_router.patch("/auth/change-password")
+async def change_password(payload: ChangePassword, current_user: dict = Depends(get_current_user)):
+    user = await db.users.find_one({"id": current_user["id"]})
+    if not user:
+        raise HTTPException(404, "User not found")
+    if not user.get("password_hash"):
+        raise HTTPException(400, "Your account uses Google Sign-In — password change is not available")
+    if not pwd_context.verify(payload.current_password, user["password_hash"]):
+        raise HTTPException(400, "Current password is incorrect")
+    if len(payload.new_password) < 8:
+        raise HTTPException(400, "New password must be at least 8 characters")
+    new_hash = pwd_context.hash(payload.new_password)
+    await db.users.update_one({"id": current_user["id"]}, {"$set": {"password_hash": new_hash}})
+    return {"message": "Password updated successfully"}
 
 
 @api_router.post("/auth/send-otp")
@@ -748,10 +783,14 @@ async def google_auth(payload: GoogleAuth):
         "role": payload.role, "google_id": google_id,
         "email_verified": True, "onboarding_complete": False, "created_at": now,
     }
-    await db.users.insert_one(dict(new_user))
+    try:
+        await db.users.insert_one(dict(new_user))
+    except Exception as e:
+        logger.error(f"Google user insert failed for {email}: {e}")
+        raise HTTPException(500, "Account creation failed — please try again")
 
     if payload.role == "creator":
-        await db.creators.insert_one({
+        profile = {
             "id": user_id, "user_id": user_id, "name": name,
             "niche": "", "city": "", "bio": "",
             "avatar": f"https://api.dicebear.com/7.x/avataaars/svg?seed={user_id}&backgroundColor=00d4c8",
@@ -759,14 +798,22 @@ async def google_auth(payload: GoogleAuth):
             "engagement_rate": 0.0, "completeness": 20, "trust_score": 0,
             "pricing": {"story": 0, "post": 0, "reel": 0},
             "portfolio": [], "brands_worked_with": [], "instagram_handle": "", "created_at": now,
-        })
+        }
+        try:
+            await db.creators.update_one({"id": user_id}, {"$setOnInsert": profile}, upsert=True)
+        except Exception as e:
+            logger.error(f"Google creator profile failed for {user_id}: {e}")
     elif payload.role == "brand":
-        await db.brands.insert_one({
+        initial = name[0].upper() if name and name.strip() else "B"
+        brand_profile = {
             "id": user_id, "user_id": user_id, "name": name,
             "industry": "", "budget_range": "", "tagline": "",
-            "logo_color": "#00d4c8",
-            "logo_initial": name[0].upper() if name else "B", "created_at": now,
-        })
+            "logo_color": "#00d4c8", "logo_initial": initial, "created_at": now,
+        }
+        try:
+            await db.brands.update_one({"id": user_id}, {"$setOnInsert": brand_profile}, upsert=True)
+        except Exception as e:
+            logger.error(f"Google brand profile failed for {user_id}: {e}")
 
     user_out = {k: v for k, v in new_user.items() if k != "_id"}
     token = create_access_token({"sub": user_id, "email": email, "role": payload.role})

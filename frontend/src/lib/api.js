@@ -39,6 +39,10 @@ export const googleSignIn = (credential, role) => api.post("/auth/google", { cre
 // Delete account
 export const deleteAccount = () => api.delete("/auth/me").then(r => r.data);
 
+// Change password
+export const changePassword = (current_password, new_password) =>
+  api.patch("/auth/change-password", { current_password, new_password }).then(r => r.data);
+
 // Phyllo / Instagram (legacy)
 export const createPhylloUser    = () => api.post("/phyllo/create-user").then(r => r.data);
 export const fetchPhylloProfile  = (account_id) => api.post("/phyllo/fetch-profile", { account_id }).then(r => r.data);
